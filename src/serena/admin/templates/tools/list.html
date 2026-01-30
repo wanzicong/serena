@@ -62,7 +62,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('admin.static', filename='admin.js') }}"></script>
 <script>
 function toggleTool(toolName, enabled) {
     if (!enabled) {
@@ -84,13 +83,14 @@ function toggleTool(toolName, enabled) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            location.reload();
+            showToast('success', data.message || '操作成功');
+            setTimeout(() => location.reload(), 500);
         } else {
-            alert('操作失败: ' + data.message);
+            showToast('error', data.message || '操作失败');
         }
     })
     .catch(error => {
-        alert('请求失败: ' + error);
+        showToast('error', '请求失败: ' + error);
     });
 }
 </script>

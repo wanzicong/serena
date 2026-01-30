@@ -196,35 +196,176 @@ button:active {
 }
 
 /* Toast Notifications */
-.toast {
+.toast-container {
     position: fixed;
     top: 1rem;
     right: 1rem;
-    padding: 1rem 1.5rem;
-    border-radius: 4px;
-    background: white;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    animation: slideIn 0.3s ease;
     z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 400px;
+    width: 100%;
 }
 
-@keyframes slideIn {
-    from {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+.toast {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 0;
+    display: flex;
+    align-items: stretch;
+    min-height: 60px;
+    transform: translateX(120%);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    position: relative;
+    overflow: hidden;
 }
 
+.toast::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+}
+
+.toast-show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast-hide {
+    transform: translateX(120%);
+    opacity: 0;
+}
+
+.toast-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.875rem 1rem;
+    flex-shrink: 0;
+}
+
+.toast-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 0.875rem 0;
+    min-width: 0;
+}
+
+.toast-message {
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.4;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    font-size: 1.25rem;
+    line-height: 1;
+    transition: color 0.2s ease;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.toast-close:hover {
+    color: #333;
+}
+
+/* Toast variants */
 .toast-success {
     border-left: 4px solid #28a745;
 }
 
+.toast-success .toast-icon {
+    color: #28a745;
+}
+
+.toast-success::before {
+    background: #28a745;
+}
+
 .toast-error {
     border-left: 4px solid #dc3545;
+}
+
+.toast-error .toast-icon {
+    color: #dc3545;
+}
+
+.toast-error::before {
+    background: #dc3545;
+}
+
+.toast-warning {
+    border-left: 4px solid #ffc107;
+}
+
+.toast-warning .toast-icon {
+    color: #ffc107;
+}
+
+.toast-warning::before {
+    background: #ffc107;
+}
+
+.toast-info {
+    border-left: 4px solid #17a2b8;
+}
+
+.toast-info .toast-icon {
+    color: #17a2b8;
+}
+
+.toast-info::before {
+    background: #17a2b8;
+}
+
+/* Responsive adjustments for toasts */
+@media (max-width: 480px) {
+    .toast-container {
+        top: 0.5rem;
+        right: 0.5rem;
+        left: 0.5rem;
+        max-width: none;
+    }
+    
+    .toast {
+        min-height: 50px;
+    }
+    
+    .toast-icon {
+        padding: 0.625rem 0.75rem;
+    }
+    
+    .toast-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .toast-content {
+        padding: 0.625rem 0;
+    }
+    
+    .toast-message {
+        font-size: 0.85rem;
+    }
+    
+    .toast-close {
+        padding: 0.375rem 0.5rem;
+        font-size: 1.1rem;
+    }
 }
 
 /* Headings */
@@ -280,592 +421,4 @@ h2 {
     font-size: 2rem;
     font-weight: 600;
     color: #2c3e50;
-}
-
-/* Configuration Overview */
-.config-section {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    margin: 2rem 0;
-}
-
-.config-overview {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 4px;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 0.85rem;
-    line-height: 1.6;
-    overflow-x: auto;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-
-.config-section h3 {
-    font-size: 1.1rem;
-    margin-bottom: 1rem;
-    color: #2c3e50;
-}
-
-/* Info Box */
-.info-box {
-    background: #e3f2fd;
-    padding: 1.5rem;
-    border-radius: 8px;
-    border-left: 4px solid #2196f3;
-    margin: 2rem 0;
-}
-
-.info-box h4 {
-    font-size: 1rem;
-    margin-bottom: 0.75rem;
-    color: #1976d2;
-}
-
-.info-box p {
-    font-size: 0.9rem;
-    margin-bottom: 0.5rem;
-    color: #424242;
-}
-
-.info-box ul {
-    margin-left: 1.5rem;
-    font-size: 0.9rem;
-    color: #424242;
-}
-
-.info-box code {
-    background: #bbdefb;
-    padding: 0.2rem 0.4rem;
-    border-radius: 3px;
-    font-size: 0.85rem;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-}
-
-/* Monitoring Dashboard */
-.monitoring-dashboard {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-}
-
-.status-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin: 2rem 0;
-}
-
-.status-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    text-align: center;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.status-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.status-card h3 {
-    font-size: 0.875rem;
-    color: #6c757d;
-    margin-bottom: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 600;
-}
-
-.status-value {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #2c3e50;
-    margin-bottom: 0.5rem;
-}
-
-.status-label {
-    font-size: 0.8rem;
-    color: #6c757d;
-}
-
-.monitoring-section {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    margin: 2rem 0;
-}
-
-.monitoring-section h3 {
-    font-size: 1.25rem;
-    margin-bottom: 1rem;
-    color: #2c3e50;
-    font-weight: 600;
-}
-
-.badge-info {
-    background: #17a2b8;
-    color: white;
-}
-
-/* Logs Page */
-.logs-page {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    margin: 2rem 0;
-}
-
-.logs-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: center;
-    padding: 1rem 0;
-    border-bottom: 1px solid #e9ecef;
-    margin-bottom: 1rem;
-}
-
-.control-group {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.control-group label {
-    font-size: 0.875rem;
-    color: #495057;
-    font-weight: 500;
-}
-
-.form-select {
-    padding: 0.375rem 0.75rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    background: white;
-    font-size: 0.875rem;
-    cursor: pointer;
-}
-
-.form-select:focus {
-    outline: none;
-    border-color: #007bff;
-}
-
-.logs-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding: 0.75rem;
-    background: #f8f9fa;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-}
-
-.stat-item {
-    font-size: 0.875rem;
-    color: #495057;
-}
-
-.stat-item strong {
-    color: #2c3e50;
-    font-weight: 600;
-}
-
-.logs-container {
-    overflow-x: auto;
-}
-
-.logs-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-}
-
-.logs-table thead {
-    background: #34495e;
-    color: white;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-.logs-table th {
-    text-align: left;
-    padding: 0.75rem 1rem;
-    font-weight: 600;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.logs-table td {
-    border-bottom: 1px solid #e9ecef;
-    padding: 0.5rem 0.75rem;
-    vertical-align: top;
-}
-
-.logs-table tr:hover {
-    background: #f8f9fa;
-}
-
-.log-time {
-    white-space: nowrap;
-    color: #6c757d;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 0.75rem;
-    width: 160px;
-}
-
-.log-level {
-    white-space: nowrap;
-    width: 100px;
-}
-
-.badge-debug {
-    background: #6c757d;
-    color: white;
-}
-
-.badge-warning {
-    background: #ffc107;
-    color: #212529;
-}
-
-.badge-error {
-    background: #dc3545;
-    color: white;
-}
-
-.badge-critical {
-    background: #343a40;
-    color: white;
-}
-
-.log-logger {
-    white-space: nowrap;
-    color: #495057;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 0.75rem;
-    width: 150px;
-}
-
-.log-message {
-    color: #212529;
-    word-break: break-word;
-    max-width: 600px;
-}
-
-/* Log row colors by level */
-.log-row.log-debug {
-    background: #f8f9fa;
-}
-
-.log-row.log-info {
-    background: white;
-}
-
-.log-row.log-warning {
-    background: #fff3cd;
-}
-
-.log-row.log-error {
-    background: #f8d7da;
-}
-
-.log-row.log-critical {
-    background: #343a40;
-    color: white;
-}
-
-.log-row.log-critical .log-message,
-.log-row.log-critical .log-logger,
-.log-row.log-critical .log-time {
-    color: white;
-}
-
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #545b62;
-}
-
-.btn-success {
-    background: #28a745;
-    color: white;
-}
-
-.btn-success:hover {
-    background: #1e7e34;
-}
-
-/* Tool Statistics Page */
-.stats-overview {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.5rem;
-    margin: 2rem 0;
-}
-
-.overview-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.overview-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.overview-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    flex-shrink: 0;
-}
-
-.overview-content {
-    flex: 1;
-}
-
-.overview-label {
-    font-size: 0.8rem;
-    color: #6c757d;
-    margin-bottom: 0.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.overview-value {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: #2c3e50;
-}
-
-/* Statistics Sections */
-.stats-section {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    margin: 2rem 0;
-}
-
-.stats-section h3 {
-    font-size: 1.25rem;
-    margin-bottom: 1.5rem;
-    color: #2c3e50;
-    font-weight: 600;
-}
-
-/* Bar Chart */
-.chart-container {
-    margin: 1rem 0;
-}
-
-.bar-chart {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.bar-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.bar-label {
-    min-width: 150px;
-    font-size: 0.9rem;
-    color: #495057;
-    font-weight: 500;
-    padding-right: 1rem;
-    word-break: break-word;
-}
-
-.bar-wrapper {
-    flex: 1;
-    background: #f8f9fa;
-    border-radius: 4px;
-    overflow: hidden;
-    position: relative;
-    height: 32px;
-}
-
-.bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: 0.75rem;
-    transition: width 0.3s ease;
-    min-width: 0;
-}
-
-.bar-value {
-    color: white;
-    font-size: 0.85rem;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-/* Token Distribution Chart */
-.token-distribution {
-    display: flex;
-    justify-content: center;
-    padding: 1rem 0;
-}
-
-.token-chart {
-    display: flex;
-    align-items: center;
-    gap: 3rem;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-/* Donut Chart */
-.donut-chart {
-    position: relative;
-    width: 200px;
-    height: 200px;
-}
-
-.donut {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-}
-
-.donut-segment {
-    fill: none;
-    stroke-width: 3;
-}
-
-.donut-input {
-    stroke: #667eea;
-}
-
-.donut-output {
-    stroke: #764ba2;
-}
-
-.donut-center {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-}
-
-.donut-total {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #2c3e50;
-}
-
-.donut-label {
-    font-size: 0.75rem;
-    color: #6c757d;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-/* Legend */
-.legend {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.9rem;
-}
-
-.legend-color {
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
-    flex-shrink: 0;
-}
-
-.legend-input {
-    background: #667eea;
-}
-
-.legend-output {
-    background: #764ba2;
-}
-
-.legend-label {
-    color: #495057;
-}
-
-/* Responsive adjustments for stats page */
-@media (max-width: 768px) {
-    .logs-controls {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .logs-stats {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .stats-overview {
-        grid-template-columns: 1fr;
-    }
-
-    .bar-item {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.5rem;
-    }
-
-    .bar-label {
-        min-width: auto;
-        padding-right: 0;
-    }
-
-    .token-chart {
-        flex-direction: column;
-        gap: 2rem;
-    }
-
-    .donut-chart {
-        width: 160px;
-        height: 160px;
-    }
-
-    .donut-total {
-        font-size: 1.5rem;
-    }
 }
