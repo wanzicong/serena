@@ -2,11 +2,26 @@
 
 from typing import TYPE_CHECKING
 
+from serena.admin.services.config_service import ConfigService
 from serena.admin.services.project_service import ProjectService
 from serena.admin.services.tool_service import ToolService
 
 if TYPE_CHECKING:
     from serena.agent import SerenaAgent
+
+
+def get_config_service(agent: "SerenaAgent") -> ConfigService:
+    """
+    Factory function to get or create a ConfigService instance.
+
+    Args:
+        agent: The SerenaAgent instance
+
+    Returns:
+        A ConfigService instance
+
+    """
+    return ConfigService(agent)
 
 
 def get_project_service(agent: "SerenaAgent") -> ProjectService:
@@ -37,4 +52,4 @@ def get_tool_service(agent: "SerenaAgent") -> ToolService:
     return ToolService(agent)
 
 
-__all__ = ["ProjectService", "ToolService", "get_project_service", "get_tool_service"]
+__all__ = ["ConfigService", "ProjectService", "ToolService", "get_config_service", "get_project_service", "get_tool_service"]

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from flask import Blueprint, Flask, Response, jsonify, render_template, request
 
-from serena.admin.services import get_project_service, get_tool_service
+from serena.admin.services import get_config_service, get_project_service, get_tool_service
 
 if TYPE_CHECKING:
     from serena.agent import SerenaAgent
@@ -23,6 +23,7 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
     admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
     # Get service instances
+    config_service = get_config_service(agent)
     project_service = get_project_service(agent)
     tool_service = get_tool_service(agent)
 
@@ -100,6 +101,12 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
             return jsonify({"status": "error", "message": "工具切换功能尚未实现，需要修改项目配置文件"}), 501
         except Exception as e:
             return jsonify({"status": "error", "message": f"操作失败: {e!s}"}), 500
+
+    @admin_bp.route("/config")
+    def config_overview() -> str:
+        """Render the configuration overview page."""
+        config_overview = config_service.get_config_overview()
+        return render_template("config/overview.html", config_overview=config_overview)
 
     # Register the blueprint with the app
     app.register_blueprint(admin_bp)

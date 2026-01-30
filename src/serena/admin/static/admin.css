@@ -281,3 +281,65 @@ h2 {
     font-weight: 600;
     color: #2c3e50;
 }
+
+/* Configuration Overview */
+.config-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin: 2rem 0;
+}
+
+.config-overview {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.config-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+/* Info Box */
+.info-box {
+    background: #e3f2fd;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid #2196f3;
+    margin: 2rem 0;
+}
+
+.info-box h4 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    color: #1976d2;
+}
+
+.info-box p {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: #424242;
+}
+
+.info-box ul {
+    margin-left: 1.5rem;
+    font-size: 0.9rem;
+    color: #424242;
+}
+
+.info-box code {
+    background: #bbdefb;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.85rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}

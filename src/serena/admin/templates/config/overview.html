@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}配置管理 - Serena Admin{% endblock %}
+
+{% block content %}
+<h2>配置管理</h2>
+
+<div class="config-section">
+    <h3>当前配置</h3>
+    <pre class="config-overview">{{ config_overview }}</pre>
+</div>
+
+<div class="info-box">
+    <h4>配置说明</h4>
+    <p>配置文件位于 <code>~/.serena/serena_config.yml</code></p>
+    <p>当前页面显示 Serena 的整体配置，包括：</p>
+    <ul>
+        <li>Serena 版本和日志级别</li>
+        <li>活跃项目</li>
+        <li>可用的项目列表</li>
+        <li>活跃的上下文和模式</li>
+        <li>活跃的工具列表</li>
+    </ul>
+</div>
+{% endblock %}
