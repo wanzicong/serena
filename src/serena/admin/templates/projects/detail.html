@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}编辑项目 - {{ project.name }} - Serena Admin{% endblock %}
+
+{% block content %}
+<h2>编辑项目: {{ project.name }}</h2>
+
+<form id="edit-project-form" class="form">
+    <div class="form-group">
+        <label for="project-name">项目名称</label>
+        <input
+            type="text"
+            id="project-name"
+            name="project_name"
+            value="{{ project.name }}"
+            readonly
+            disabled
+        >
+        <small class="form-help">项目名称不能修改</small>
+    </div>
+
+    <div class="form-group">
+        <label for="project-path">项目路径</label>
+        <input
+            type="text"
+            id="project-path"
+            name="project_path"
+            value="{{ project.path }}"
+            readonly
+            disabled
+        >
+        <small class="form-help">项目路径不能修改</small>
+    </div>
+
+    <div class="form-group">
+        <label for="project-languages">编程语言 <span class="required">*</span></label>
+        <select
+            id="project-languages"
+            name="languages"
+            multiple
+            required
+        >
+            {% for lang in languages %}
+            <option value="{{ lang }}" {{ 'selected' if lang in project.languages else '' }}>{{ lang }}</option>
+            {% endfor %}
+        </select>
+        <small class="form-help">按住 Ctrl/Cmd 键可多选语言</small>
+    </div>
+
+    <div class="form-group">
+        <label for="project-ignored-paths">忽略路径</label>
+        <textarea
+            id="project-ignored-paths"
+            name="ignored_paths"
+            rows="3"
+            placeholder="每行一个路径，例如: node_modules, dist, build"
+        >{% if project.ignored_paths %}{{ project.ignored_paths | join('\n') }}{% endif %}</textarea>
+        <small class="form-help">每行一个路径，这些路径将被 Serena 忽略</small>
+    </div>
+
+    <fieldset class="form-fieldset">
+        <legend>项目选项</legend>
+        
+        <div class="form-group checkbox-group">
+            <label>
+                <input
+                    type="checkbox"
+                    id="project-read-only"
+                    name="read_only"
+                    {{ 'checked' if project.read_only else '' }}
+                >
+                只读模式
+            </label>
+            <small class="form-help">启用后，Serena 将不会修改此项目的文件</small>
+        </div>
+
+        <div class="form-group checkbox-group">
+            <label>
+                <input
+                    type="checkbox"
+                    id="project-ignore-gitignore"
+                    name="ignore_all_files_in_gitignore"
+                    {{ 'checked' if project.ignore_all_files_in_gitignore else '' }}
+                >
+                忽略 .gitignore 中的文件
+            </label>
+            <small class="form-help">自动忽略 .gitignore 文件中列出的文件和目录</small>
+        </div>
+    </fieldset>
+
+    <div class="form-group">
+        <label for="project-initial-prompt">初始提示词</label>
+        <textarea
+            id="project-initial-prompt"
+            name="initial_prompt"
+            rows="4"
+            placeholder="可选：为此项目设置默认的初始提示词"
+        >{{ project.initial_prompt }}</textarea>
+        <small class="form-help">当激活此项目时使用的默认提示词</small>
+    </div>
+
+    <div class="form-group">
+        <label for="project-encoding">文件编码</label>
+        <input
+            type="text"
+            id="project-encoding"
+            name="encoding"
+            value="{{ project.encoding }}"
+            placeholder="默认: utf-8"
+        >
+        <small class="form-help">读取源文件时使用的编码格式</small>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">保存更改</button>
+        <a href="/admin/projects" class="btn btn-secondary">取消</a>
+    </div>
+</form>
+
+<div id="form-message" class="form-message" style="display: none;"></div>
+
+<div class="info-box">
+    <h3>说明</h3>
+    <ul>
+        <li><strong>编程语言：</strong>选择项目使用的编程语言，支持多选</li>
+        <li><strong>忽略路径：</strong>指定不需要 Serena 处理的目录或文件</li>
+        <li><strong>只读模式：</strong>启用后可防止意外修改项目文件</li>
+        <li><strong>初始提示词：</strong>为项目设置上下文信息，在激活时自动应用</li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 存储原始项目名称
+const originalProjectName = '{{ project.name }}';
+
+document.getElementById('edit-project-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const messageDiv = document.getElementById('form-message');
+    const submitBtn = this.querySelector('button[type="submit"]');
+    
+    // 处理多选语言
+    const languageSelect = document.getElementById('project-languages');
+    const selectedLanguages = Array.from(languageSelect.selectedOptions).map(option => option.value);
+    
+    // 处理忽略路径（按行分割）
+    const ignoredPathsInput = document.getElementById('project-ignored-paths').value;
+    const ignoredPaths = ignoredPathsInput
+        .split('\n')
+        .map(path => path.trim())
+        .filter(path => path.length > 0);
+    
+    // 构建请求数据
+    const requestData = {
+        project_name: originalProjectName,
+        languages: selectedLanguages,
+        ignored_paths: ignoredPaths,
+        read_only: document.getElementById('project-read-only').checked,
+        ignore_all_files_in_gitignore: document.getElementById('project-ignore-gitignore').checked,
+        initial_prompt: document.getElementById('project-initial-prompt').value,
+        encoding: document.getElementById('project-encoding').value || 'utf-8',
+    };
+    
+    // 验证
+    if (selectedLanguages.length === 0) {
+        showMessage('error', '请至少选择一种编程语言');
+        return;
+    }
+    
+    // 禁用提交按钮
+    submitBtn.disabled = true;
+    submitBtn.textContent = '保存中...';
+    
+    try {
+        const response = await fetch('/admin/projects/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'success') {
+            showMessage('success', data.message);
+            
+            // 延迟跳转到项目列表页面
+            setTimeout(() => {
+                window.location.href = '/admin/projects';
+            }, 1500);
+        } else {
+            showMessage('error', data.message || '更新项目失败');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '保存更改';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showMessage('error', '网络错误，请稍后重试');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '保存更改';
+    }
+});
+
+function showMessage(type, message) {
+    const messageDiv = document.getElementById('form-message');
+    messageDiv.className = 'form-message ' + type;
+    messageDiv.textContent = message;
+    messageDiv.style.display = 'block';
+    
+    // 3秒后自动隐藏成功消息
+    if (type === 'success') {
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 3000);
+    }
+}
+</script>
+
+<style>
+.form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.form-group label .required {
+    color: #dc3545;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-group input[type="text"]:disabled,
+.form-group input[readonly] {
+    background-color: #f5f5f5;
+    color: #777;
+}
+
+.form-group select[multiple] {
+    min-height: 120px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-help {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-weight: 400;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin: 0;
+}
+
+.form-fieldset {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-fieldset legend {
+    padding: 0 0.5rem;
+    font-weight: 600;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.form-message {
+    padding: 1rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+}
+
+.form-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.form-message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.info-box {
+    max-width: 600px;
+    margin: 2rem auto 0;
+    padding: 1rem;
+    background-color: #e7f3ff;
+    border-left: 4px solid #007bff;
+    border-radius: 4px;
+}
+
+.info-box h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.info-box ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.info-box li {
+    margin-bottom: 0.25rem;
+}
+</style>
+{% endblock %}

@@ -101,6 +101,41 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         except Exception as e:
             return jsonify({"status": "error", "message": f"创建项目时出错: {e!s}"}), 500
 
+    @admin_bp.route("/projects/<project_name>/edit")
+    def projects_edit(project_name: str) -> str:
+        """Render the project edit page."""
+        try:
+            project_detail = project_service.get_project_detail(project_name)
+            languages = project_service.get_available_languages()
+            return render_template("projects/detail.html", project=project_detail, languages=languages)
+        except ValueError as e:
+            return f"<h1>错误</h1><p>{e!s}</p>"
+
+    @admin_bp.route("/projects/update", methods=["POST"])
+    def update_project() -> tuple[Response, int] | Response:
+        """Update a project's configuration."""
+        data = request.get_json()
+        project_name = data.get("project_name")
+
+        if not project_name:
+            return jsonify({"status": "error", "message": "项目名称不能为空"}), 400
+
+        try:
+            # Remove project_name from updates as it's used to identify the project
+            updates = {k: v for k, v in data.items() if k != "project_name"}
+            project_info = project_service.update_project(project_name, updates)
+            return jsonify(
+                {
+                    "status": "success",
+                    "message": f"项目 '{project_info['name']}' 已更新",
+                    "project": project_info,
+                }
+            )
+        except ValueError as e:
+            return jsonify({"status": "error", "message": str(e)}), 404
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"更新项目时出错: {e!s}"}), 500
+
     @admin_bp.route("/api/active-project")
     def get_active_project() -> Response:
         """Get the currently active project."""

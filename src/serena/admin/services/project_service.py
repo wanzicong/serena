@@ -125,3 +125,139 @@ class ProjectService:
         from serena.config.ls_config import Language
 
         return [lang.value for lang in Language]
+
+    def get_project_detail(self, project_name: str) -> dict[str, Any]:
+        """
+        Get detailed information about a specific project.
+
+        Args:
+            project_name: The name of the project
+
+        Returns:
+            A dictionary containing detailed project information
+
+        Raises:
+            ValueError: If the project is not found
+
+        """
+        config = self._agent.serena_config
+
+        # Find the project by name
+        project = None
+        for proj in config.projects:
+            if proj.project_config.project_name == project_name:
+                project = proj
+                break
+
+        if project is None:
+            raise ValueError(f"Project '{project_name}' not found")
+
+        return {
+            "name": project.project_config.project_name,
+            "path": str(project.project_root),
+            "languages": [lang.value for lang in project.project_config.languages],
+            "ignored_paths": project.project_config.ignored_paths,
+            "read_only": project.project_config.read_only,
+            "ignore_all_files_in_gitignore": project.project_config.ignore_all_files_in_gitignore,
+            "initial_prompt": project.project_config.initial_prompt,
+            "encoding": project.project_config.encoding,
+            "excluded_tools": list(project.project_config.excluded_tools) if project.project_config.excluded_tools else [],
+            "fixed_tools": list(project.project_config.fixed_tools) if project.project_config.fixed_tools else [],
+            "included_optional_tools": (
+                list(project.project_config.included_optional_tools) if project.project_config.included_optional_tools else []
+            ),
+            "base_modes": list(project.project_config.base_modes) if project.project_config.base_modes else [],
+            "default_modes": list(project.project_config.default_modes) if project.project_config.default_modes else [],
+        }
+
+    def update_project(self, project_name: str, updates: dict[str, Any]) -> dict[str, Any]:
+        """
+        Update a project's configuration.
+
+        Args:
+            project_name: The name of the project to update
+            updates: A dictionary containing the fields to update
+
+        Returns:
+            A dictionary containing the updated project information
+
+        Raises:
+            ValueError: If the project is not found or validation fails
+
+        """
+        from serena.config.ls_config import Language
+        from serena.config.serena_config import RegisteredProject
+
+        config = self._agent.serena_config
+
+        # Find the project by name
+        project = None
+        project_index = -1
+        for i, proj in enumerate(config.projects):
+            if proj.project_config.project_name == project_name:
+                project = proj
+                project_index = i
+                break
+
+        if project is None:
+            raise ValueError(f"Project '{project_name}' not found")
+
+        # Get the current project config
+        project_config = project.project_config
+
+        # Update fields
+        if "languages" in updates:
+            languages = []
+            for lang_str in updates["languages"]:
+                try:
+                    language = Language(lang_str)
+                    languages.append(language)
+                except ValueError as e:
+                    raise ValueError(f"Invalid language: {lang_str}") from e
+            project_config.languages = languages
+
+        if "ignored_paths" in updates:
+            project_config.ignored_paths = updates["ignored_paths"]
+
+        if "read_only" in updates:
+            project_config.read_only = updates["read_only"]
+
+        if "ignore_all_files_in_gitignore" in updates:
+            project_config.ignore_all_files_in_gitignore = updates["ignore_all_files_in_gitignore"]
+
+        if "initial_prompt" in updates:
+            project_config.initial_prompt = updates["initial_prompt"]
+
+        if "encoding" in updates:
+            project_config.encoding = updates["encoding"]
+
+        if "excluded_tools" in updates:
+            project_config.excluded_tools = updates["excluded_tools"]
+
+        if "fixed_tools" in updates:
+            project_config.fixed_tools = updates["fixed_tools"]
+
+        if "included_optional_tools" in updates:
+            project_config.included_optional_tools = updates["included_optional_tools"]
+
+        if "base_modes" in updates:
+            project_config.base_modes = updates["base_modes"]
+
+        if "default_modes" in updates:
+            project_config.default_modes = updates["default_modes"]
+
+        # Save the updated project config
+        project_config.save(project.project_root)
+
+        # Update the registered project in config
+        updated_registered_project = RegisteredProject(
+            project_root=str(project.project_root),
+            project_config=project_config,
+        )
+        config.projects[project_index] = updated_registered_project
+
+        # Save the serena config
+        config.save()
+
+        # Return updated project info
+        return self.get_project_detail(project_config.project_name)
