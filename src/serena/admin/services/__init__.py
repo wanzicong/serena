@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING
 
 from serena.admin.services.config_service import ConfigService
+from serena.admin.services.monitoring_service import MonitoringService
 from serena.admin.services.project_service import ProjectService
 from serena.admin.services.tool_service import ToolService
 
@@ -52,4 +53,27 @@ def get_tool_service(agent: "SerenaAgent") -> ToolService:
     return ToolService(agent)
 
 
-__all__ = ["ConfigService", "ProjectService", "ToolService", "get_config_service", "get_project_service", "get_tool_service"]
+def get_monitoring_service(agent: "SerenaAgent") -> MonitoringService:
+    """
+    Factory function to get or create a MonitoringService instance.
+
+    Args:
+        agent: The SerenaAgent instance
+
+    Returns:
+        A MonitoringService instance
+
+    """
+    return MonitoringService(agent)
+
+
+__all__ = [
+    "ConfigService",
+    "MonitoringService",
+    "ProjectService",
+    "ToolService",
+    "get_config_service",
+    "get_monitoring_service",
+    "get_project_service",
+    "get_tool_service",
+]

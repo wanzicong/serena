@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}系统监控 - Serena Admin{% endblock %}
+
+{% block content %}
+<h2>系统监控</h2>
+
+<div class="monitoring-dashboard">
+    <!-- System Status Cards -->
+    <div class="status-cards">
+        <div class="status-card">
+            <h3>LSP 服务器</h3>
+            <div class="status-value">{{ system_status.lsp_servers }}</div>
+            <div class="status-label">活跃服务器</div>
+        </div>
+
+        <div class="status-card">
+            <h3>活跃任务</h3>
+            <div class="status-value">{{ system_status.active_tasks }}</div>
+            <div class="status-label">正在执行的任务</div>
+        </div>
+
+        <div class="status-card">
+            <h3>活跃项目</h3>
+            <div class="status-value">{{ system_status.active_project or '无' }}</div>
+            <div class="status-label">当前激活的项目</div>
+        </div>
+    </div>
+
+    <!-- LSP Languages Section -->
+    <div class="monitoring-section">
+        <h3>LSP 语言服务器</h3>
+        {% if system_status.lsp_languages %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>语言</th>
+                    <th>语言服务器</th>
+                    <th>状态</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lsp in lsp_info %}
+                <tr>
+                    <td><strong>{{ lsp.language }}</strong></td>
+                    <td><code>{{ lsp.language_server }}</code></td>
+                    <td><span class="badge badge-success">运行中</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h4>暂无活跃的 LSP 服务器</h4>
+            <p>激活一个项目后，相应的语言服务器将会启动。</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Tasks Section -->
+    <div class="monitoring-section">
+        <h3>当前任务</h3>
+        {% if tasks_info %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>任务名称</th>
+                    <th>状态</th>
+                    <th>记录</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks_info %}
+                <tr>
+                    <td><strong>{{ task.name }}</strong></td>
+                    <td>
+                        {% if task.status == 'running' %}
+                        <span class="badge badge-success">运行中</span>
+                        {% elif task.status == 'queued' %}
+                        <span class="badge badge-secondary">队列中</span>
+                        {% else %}
+                        <span class="badge badge-info">已完成</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if task.logged %}
+                        <span class="badge badge-success">是</span>
+                        {% else %}
+                        <span class="badge badge-secondary">否</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h4>暂无活跃任务</h4>
+            <p>当前没有正在执行或队列中的任务。</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto-refresh the monitoring page every 5 seconds
+    setTimeout(function() {
+        location.reload();
+    }, 5000);
+</script>
+{% endblock %}

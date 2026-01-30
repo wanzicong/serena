@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from flask import Blueprint, Flask, Response, jsonify, render_template, request
 
-from serena.admin.services import get_config_service, get_project_service, get_tool_service
+from serena.admin.services import get_config_service, get_monitoring_service, get_project_service, get_tool_service
 
 if TYPE_CHECKING:
     from serena.agent import SerenaAgent
@@ -26,6 +26,7 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
     config_service = get_config_service(agent)
     project_service = get_project_service(agent)
     tool_service = get_tool_service(agent)
+    monitoring_service = get_monitoring_service(agent)
 
     @admin_bp.route("/projects")
     def projects_list() -> str:
@@ -107,6 +108,14 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         """Render the configuration overview page."""
         config_overview = config_service.get_config_overview()
         return render_template("config/overview.html", config_overview=config_overview)
+
+    @admin_bp.route("/monitoring")
+    def monitoring_overview() -> str:
+        """Render the system monitoring overview page."""
+        system_status = monitoring_service.get_system_status()
+        tasks_info = monitoring_service.get_tasks_info()
+        lsp_info = monitoring_service.get_lsp_info()
+        return render_template("monitoring/overview.html", system_status=system_status, tasks_info=tasks_info, lsp_info=lsp_info)
 
     # Register the blueprint with the app
     app.register_blueprint(admin_bp)
