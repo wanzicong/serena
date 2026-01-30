@@ -349,6 +349,11 @@ class SerenaDashboardAPI:
             except Exception as e:
                 return {"status": "error", "message": str(e)}
 
+        # Register admin routes
+        from serena.admin.routes import register_admin_routes
+
+        register_admin_routes(self._app, self._agent)
+
     def _get_log_messages(self, request_log: RequestLog) -> ResponseLog:
         all_messages = self._memory_log_handler.get_log_messages()
         requested_messages = all_messages[request_log.start_idx :] if request_log.start_idx <= len(all_messages) else []
