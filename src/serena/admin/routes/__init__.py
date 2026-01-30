@@ -3,8 +3,16 @@
 from typing import TYPE_CHECKING
 
 from flask import Blueprint, Flask, Response, jsonify, render_template, request
+from pydantic import ValidationError
 
+from serena.admin.error_handlers import register_error_handlers
 from serena.admin.services import get_config_service, get_monitoring_service, get_project_service, get_tool_service
+from serena.admin.validators import (
+    ProjectActionRequest,
+    ProjectCreateRequest,
+    ProjectUpdateRequest,
+    ToolToggleRequest,
+)
 
 if TYPE_CHECKING:
     from serena.agent import SerenaAgent
@@ -19,6 +27,9 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         agent: The SerenaAgent instance
 
     """
+    # 注册错误处理器
+    register_error_handlers(app)
+
     # Create a blueprint for admin routes
     admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -34,20 +45,17 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         projects = project_service.get_all_projects()
         return render_template("projects/list.html", projects=projects)
 
-    # Note: activate and delete routes implemented here for complete UX
-    # Originally planned for Task 4, but implemented early for better user experience
     @admin_bp.route("/projects/activate", methods=["POST"])
     def activate_project() -> tuple[Response, int] | Response:
         """Activate a project by name."""
-        data = request.get_json()
-        project_name = data.get("project_name")
-
-        if not project_name:
-            return jsonify({"status": "error", "message": "项目名称不能为空"}), 400
-
         try:
-            project_service.activate_project(project_name)
-            return jsonify({"status": "success", "message": f"项目 '{project_name}' 已激活"})
+            data = request.get_json() or {}
+            validated = ProjectActionRequest(**data)
+            project_service.activate_project(validated.project_name)
+            return jsonify({"status": "success", "message": f"项目 '{validated.project_name}' 已激活"})
+        except ValidationError:
+            # 验证错误由全局错误处理器处理
+            raise
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 404
         except Exception as e:
@@ -56,15 +64,14 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
     @admin_bp.route("/projects/delete", methods=["POST"])
     def delete_project() -> tuple[Response, int] | Response:
         """Delete a project by name."""
-        data = request.get_json()
-        project_name = data.get("project_name")
-
-        if not project_name:
-            return jsonify({"status": "error", "message": "项目名称不能为空"}), 400
-
         try:
-            project_service.delete_project(project_name)
-            return jsonify({"status": "success", "message": f"项目 '{project_name}' 已删除"})
+            data = request.get_json() or {}
+            validated = ProjectActionRequest(**data)
+            project_service.delete_project(validated.project_name)
+            return jsonify({"status": "success", "message": f"项目 '{validated.project_name}' 已删除"})
+        except ValidationError:
+            # 验证错误由全局错误处理器处理
+            raise
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 404
         except Exception as e:
@@ -79,14 +86,10 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
     @admin_bp.route("/projects/create", methods=["POST"])
     def create_project() -> tuple[Response, int] | Response:
         """Create a new project from a given path."""
-        data = request.get_json()
-        project_path = data.get("project_path")
-
-        if not project_path:
-            return jsonify({"status": "error", "message": "项目路径不能为空"}), 400
-
         try:
-            project_info = project_service.create_project(project_path)
+            data = request.get_json() or {}
+            validated = ProjectCreateRequest(**data)
+            project_info = project_service.create_project(validated.project_path)
             return jsonify(
                 {
                     "status": "success",
@@ -94,6 +97,9 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
                     "project": project_info,
                 }
             )
+        except ValidationError:
+            # 验证错误由全局错误处理器处理
+            raise
         except FileNotFoundError as e:
             return jsonify({"status": "error", "message": str(e)}), 404
         except FileExistsError as e:
@@ -102,28 +108,24 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
             return jsonify({"status": "error", "message": f"创建项目时出错: {e!s}"}), 500
 
     @admin_bp.route("/projects/<project_name>/edit")
-    def projects_edit(project_name: str) -> str:
+    def projects_edit(project_name: str) -> str | tuple[str, int]:
         """Render the project edit page."""
         try:
             project_detail = project_service.get_project_detail(project_name)
             languages = project_service.get_available_languages()
             return render_template("projects/detail.html", project=project_detail, languages=languages)
         except ValueError as e:
-            return f"<h1>错误</h1><p>{e!s}</p>"
+            return render_template("error.html", error_code=404, error_message=str(e)), 404
 
     @admin_bp.route("/projects/update", methods=["POST"])
     def update_project() -> tuple[Response, int] | Response:
         """Update a project's configuration."""
-        data = request.get_json()
-        project_name = data.get("project_name")
-
-        if not project_name:
-            return jsonify({"status": "error", "message": "项目名称不能为空"}), 400
-
         try:
+            data = request.get_json() or {}
+            validated = ProjectUpdateRequest(**data)
             # Remove project_name from updates as it's used to identify the project
-            updates = {k: v for k, v in data.items() if k != "project_name"}
-            project_info = project_service.update_project(project_name, updates)
+            updates = {k: v for k, v in validated.model_dump().items() if k not in ["project_name"] and v is not None}
+            project_info = project_service.update_project(validated.project_name, updates)
             return jsonify(
                 {
                     "status": "success",
@@ -131,6 +133,9 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
                     "project": project_info,
                 }
             )
+        except ValidationError:
+            # 验证错误由全局错误处理器处理
+            raise
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 404
         except Exception as e:
@@ -154,16 +159,19 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
     @admin_bp.route("/tools/toggle", methods=["POST"])
     def toggle_tool() -> tuple[Response, int]:
         """Toggle tool enabled/disabled."""
-        data = request.get_json()
-        tool_name = data.get("tool_name")
-        enabled = data.get("enabled")
-
-        if not tool_name or enabled is None:
-            return jsonify({"status": "error", "message": "缺少参数"}), 400
-
         try:
-            tool_service.toggle_tool(tool_name, enabled)
-            return jsonify({"status": "success", "message": f"工具 '{tool_name}' 已{'启用' if enabled else '禁用'}"}), 200
+            data = request.get_json() or {}
+            validated = ToolToggleRequest(**data)
+            # validated.enabled 在 model_validator 后保证不为 None
+            enabled: bool = validated.enabled if validated.enabled is not None else False
+            tool_service.toggle_tool(validated.tool_name, enabled)
+            return (
+                jsonify({"status": "success", "message": f"工具 '{validated.tool_name}' 已{'启用' if enabled else '禁用'}"}),
+                200,
+            )
+        except ValidationError:
+            # 验证错误由全局错误处理器处理
+            raise
         except NotImplementedError:
             return jsonify({"status": "error", "message": "工具切换功能尚未实现，需要修改项目配置文件"}), 501
         except Exception as e:

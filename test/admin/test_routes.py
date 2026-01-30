@@ -27,7 +27,8 @@ class TestActivateProject:
         assert response.status_code == 400
         data = response.get_json()
         assert data["status"] == "error"
-        assert "不能为空" in data["message"]
+        # 新的验证错误响应格式
+        assert "输入验证失败" in data["message"] or "不能为空" in data.get("details", {}).get("errors", [{}])[0].get("message", "")
         mock_agent.activate_project_from_path_or_name.assert_not_called()
 
     def test_activate_project_empty_name(self, client: "FlaskClient", mock_agent: MagicMock) -> None:
@@ -37,7 +38,8 @@ class TestActivateProject:
         assert response.status_code == 400
         data = response.get_json()
         assert data["status"] == "error"
-        assert "不能为空" in data["message"]
+        # 新的验证错误响应格式
+        assert "输入验证失败" in data["message"] or "不能为空" in data.get("details", {}).get("errors", [{}])[0].get("message", "")
         mock_agent.activate_project_from_path_or_name.assert_not_called()
 
     def test_activate_project_not_found(self, client: "FlaskClient", mock_agent: MagicMock) -> None:
@@ -83,7 +85,8 @@ class TestDeleteProject:
         assert response.status_code == 400
         data = response.get_json()
         assert data["status"] == "error"
-        assert "不能为空" in data["message"]
+        # 新的验证错误响应格式
+        assert "输入验证失败" in data["message"] or "不能为空" in data.get("details", {}).get("errors", [{}])[0].get("message", "")
         mock_agent.serena_config.remove_project.assert_not_called()
 
     def test_delete_project_empty_name(self, client: "FlaskClient", mock_agent: MagicMock) -> None:
@@ -93,7 +96,8 @@ class TestDeleteProject:
         assert response.status_code == 400
         data = response.get_json()
         assert data["status"] == "error"
-        assert "不能为空" in data["message"]
+        # 新的验证错误响应格式
+        assert "输入验证失败" in data["message"] or "不能为空" in data.get("details", {}).get("errors", [{}])[0].get("message", "")
         mock_agent.serena_config.remove_project.assert_not_called()
 
     def test_delete_project_not_found(self, client: "FlaskClient", mock_agent: MagicMock) -> None:
