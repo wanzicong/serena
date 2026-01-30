@@ -3,7 +3,13 @@
 {% block title %}系统监控 - Serena Admin{% endblock %}
 
 {% block content %}
-<h2>系统监控</h2>
+<div class="page-header">
+    <h2>系统监控</h2>
+    <div class="page-actions">
+        <a href="/admin/monitoring/lsp" class="btn btn-secondary">LSP 服务器详情</a>
+        <a href="/admin/monitoring/logs" class="btn btn-secondary">查看日志</a>
+    </div>
+</div>
 
 <div class="monitoring-dashboard">
     <!-- System Status Cards -->

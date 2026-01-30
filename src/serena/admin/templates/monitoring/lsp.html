@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}LSP 服务器监控 - Serena Admin{% endblock %}
+
+{% block content %}
+<h2>LSP 服务器监控</h2>
+
+<div class="lsp-monitoring-page">
+    <!-- Status Cards -->
+    <div class="status-cards">
+        <div class="status-card">
+            <h3>活跃服务器</h3>
+            <div class="status-value" id="total-servers">{{ lsp_status.total_servers }}</div>
+            <div class="status-label">运行中的语言服务器</div>
+        </div>
+
+        <div class="status-card">
+            <h3>支持的语言</h3>
+            <div class="status-value" id="supported-count">{{ lsp_status.supported_languages|length }}</div>
+            <div class="status-label">可用的编程语言</div>
+        </div>
+
+        <div class="status-card">
+            <h3>项目路径</h3>
+            <div class="status-value-small">
+                {% if lsp_status.servers %}
+                <code>{{ lsp_status.servers[0].project_path }}</code>
+                {% else %}
+                <span class="text-muted">无</span>
+                {% endif %}
+            </div>
+            <div class="status-label">当前监控的项目</div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="monitoring-controls">
+        <button id="refresh-btn" class="btn btn-primary">
+            <span class="btn-icon">↻</span> 刷新状态
+        </button>
+        <button id="auto-refresh-toggle" class="btn btn-secondary">
+            <span class="btn-icon">⏱</span> 自动刷新: 关
+        </button>
+    </div>
+
+    <!-- Active LSP Servers -->
+    <div class="monitoring-section">
+        <h3>活跃的 LSP 服务器</h3>
+        {% if lsp_status.servers %}
+        <table class="data-table" id="lsp-servers-table">
+            <thead>
+                <tr>
+                    <th>语言</th>
+                    <th>语言服务器</th>
+                    <th>状态</th>
+                    <th>项目路径</th>
+                </tr>
+            </thead>
+            <tbody id="lsp-servers-body">
+                {% for server in lsp_status.servers %}
+                <tr>
+                    <td><strong>{{ server.language }}</strong></td>
+                    <td><code>{{ server.language_server }}</code></td>
+                    <td>
+                        <span class="badge badge-success">
+                            <span class="status-indicator status-running"></span>
+                            {{ server.status }}
+                        </span>
+                    </td>
+                    <td><code class="path-text">{{ server.project_path }}</code></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state" id="empty-state">
+            <div class="empty-icon">⊘</div>
+            <h4>暂无活跃的 LSP 服务器</h4>
+            <p>当前没有运行中的语言服务器。激活一个项目后，相应的语言服务器将会启动。</p>
+            <a href="/admin/projects" class="btn btn-primary">管理项目</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Supported Languages -->
+    <div class="monitoring-section">
+        <h3>支持的语言</h3>
+        <div class="languages-grid">
+            {% for lang in lsp_status.supported_languages %}
+            <div class="language-tag {% if lsp_status.servers and lsp_status.servers|map(attribute='language')|list|contains(lang) %}language-active{% endif %}">
+                <span class="lang-name">{{ lang }}</span>
+                {% if lsp_status.servers and lsp_status.servers|map(attribute='language')|list|contains(lang) %}
+                <span class="lang-indicator">●</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        <p class="section-note">
+            <span class="legend-dot"></span> 绿色标记表示当前运行中的语言服务器
+        </p>
+    </div>
+
+    <!-- LSP Information -->
+    <div class="monitoring-section">
+        <h3>关于 LSP</h3>
+        <div class="info-box">
+            <h4>什么是语言服务器协议 (LSP)?</h4>
+            <p>
+                语言服务器协议 (Language Server Protocol) 是一种开放协议，
+                用于在代码编辑器和语言服务器之间传输功能特性，如自动完成、
+                跳转到定义、查找引用等。
+            </p>
+            <h4>Serena 中的 LSP 支持</h4>
+            <p>
+                Serena 使用 SolidLSP 库支持 {{ lsp_status.supported_languages|length }} 种编程语言。
+                当激活项目时，系统会自动检测项目语言并启动相应的语言服务器。
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let autoRefreshInterval = null;
+    let autoRefreshEnabled = false;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Refresh button
+        const refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', refreshLspStatus);
+        }
+
+        // Auto-refresh toggle
+        const autoRefreshToggle = document.getElementById('auto-refresh-toggle');
+        if (autoRefreshToggle) {
+            autoRefreshToggle.addEventListener('click', toggleAutoRefresh);
+        }
+    });
+
+    function refreshLspStatus() {
+        const refreshBtn = document.getElementById('refresh-btn');
+        const originalText = refreshBtn.innerHTML;
+
+        refreshBtn.innerHTML = '<span class="btn-icon spinning">↻</span> 加载中...';
+        refreshBtn.disabled = true;
+
+        fetch('/admin/api/lsp-status')
+            .then(response => response.json())
+            .then(data => {
+                updateLspStatus(data);
+                showToast('success', 'LSP 状态已刷新');
+            })
+            .catch(error => {
+                console.error('Error loading LSP status:', error);
+                showToast('error', '加载 LSP 状态失败');
+            })
+            .finally(() => {
+                refreshBtn.innerHTML = originalText;
+                refreshBtn.disabled = false;
+            });
+    }
+
+    function updateLspStatus(data) {
+        // Update status cards
+        document.getElementById('total-servers').textContent = data.total_servers;
+        document.getElementById('supported-count').textContent = data.supported_languages.length;
+
+        // Update servers table
+        const tbody = document.getElementById('lsp-servers-body');
+        const emptyState = document.getElementById('empty-state');
+        const table = document.getElementById('lsp-servers-table');
+
+        if (data.servers.length > 0) {
+            // Clear existing rows
+            tbody.innerHTML = '';
+
+            // Add new rows
+            data.servers.forEach(server => {
+                const row = document.createElement('tr');
+
+                const langCell = document.createElement('td');
+                langCell.innerHTML = `<strong>${server.language}</strong>`;
+
+                const lsCell = document.createElement('td');
+                lsCell.innerHTML = `<code>${server.language_server}</code>`;
+
+                const statusCell = document.createElement('td');
+                statusCell.innerHTML = `
+                    <span class="badge badge-success">
+                        <span class="status-indicator status-running"></span>
+                        ${server.status}
+                    </span>
+                `;
+
+                const pathCell = document.createElement('td');
+                pathCell.innerHTML = `<code class="path-text">${server.project_path}</code>`;
+
+                row.appendChild(langCell);
+                row.appendChild(lsCell);
+                row.appendChild(statusCell);
+                row.appendChild(pathCell);
+
+                tbody.appendChild(row);
+            });
+
+            // Show table, hide empty state
+            if (table) table.style.display = '';
+            if (emptyState) emptyState.style.display = 'none';
+        } else {
+            // Hide table, show empty state
+            if (table) table.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'block';
+        }
+
+        // Update supported languages grid
+        const languagesGrid = document.querySelector('.languages-grid');
+        if (languagesGrid) {
+            const activeLanguages = data.servers.map(s => s.language);
+            languagesGrid.innerHTML = '';
+
+            data.supported_languages.forEach(lang => {
+                const tag = document.createElement('div');
+                tag.className = 'language-tag';
+
+                if (activeLanguages.includes(lang)) {
+                    tag.classList.add('language-active');
+                    tag.innerHTML = `<span class="lang-name">${lang}</span><span class="lang-indicator">●</span>`;
+                } else {
+                    tag.innerHTML = `<span class="lang-name">${lang}</span>`;
+                }
+
+                languagesGrid.appendChild(tag);
+            });
+        }
+    }
+
+    function toggleAutoRefresh() {
+        const button = document.getElementById('auto-refresh-toggle');
+
+        if (autoRefreshEnabled) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshEnabled = false;
+            button.innerHTML = '<span class="btn-icon">⏱</span> 自动刷新: 关';
+            button.classList.remove('btn-success');
+            button.classList.add('btn-secondary');
+        } else {
+            autoRefreshInterval = setInterval(refreshLspStatus, 5000);
+            autoRefreshEnabled = true;
+            button.innerHTML = '<span class="btn-icon">⏱</span> 自动刷新: 开';
+            button.classList.remove('btn-secondary');
+            button.classList.add('btn-success');
+        }
+    }
+
+    function showToast(type, message) {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+</script>
+{% endblock %}

@@ -100,6 +100,49 @@ class MonitoringService:
 
         return lsp_info
 
+    def get_lsp_detailed_status(self) -> dict[str, Any]:
+        """
+        Get detailed status information about all active LSP servers.
+
+        Returns:
+            A dictionary containing:
+            - total_servers: Total number of LSP servers
+            - servers: List of detailed server information including:
+                - language: Programming language
+                - language_server: Language server name
+                - status: Running status
+                - project_path: Project root path
+            - supported_languages: List of all supported languages
+
+        """
+        from solidlsp.ls_config import Language
+
+        ls_manager = self._agent.get_language_server_manager()
+        servers = []
+
+        if ls_manager:
+            active_languages = ls_manager.get_active_languages()
+            project_path = ls_manager.get_root_path()
+
+            for lang in active_languages:
+                servers.append(
+                    {
+                        "language": lang.value,
+                        "language_server": f"{lang.value}-language-server",
+                        "status": "运行中",
+                        "project_path": project_path,
+                    }
+                )
+
+        # Get all supported languages
+        supported_languages = [lang.value for lang in Language]
+
+        return {
+            "total_servers": len(servers),
+            "servers": servers,
+            "supported_languages": sorted(supported_languages),
+        }
+
     def get_logs(self, limit: int = 100) -> list[dict[str, Any]]:
         """
         Get recent log entries.

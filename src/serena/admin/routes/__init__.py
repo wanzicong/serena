@@ -203,5 +203,17 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         lsp_info = monitoring_service.get_lsp_info()
         return render_template("monitoring/overview.html", system_status=system_status, tasks_info=tasks_info, lsp_info=lsp_info)
 
+    @admin_bp.route("/monitoring/lsp")
+    def lsp_monitoring() -> str:
+        """Render the LSP server monitoring page."""
+        lsp_status = monitoring_service.get_lsp_detailed_status()
+        return render_template("monitoring/lsp.html", lsp_status=lsp_status)
+
+    @admin_bp.route("/api/lsp-status")
+    def api_lsp_status() -> Response:
+        """Get LSP status as JSON for AJAX requests."""
+        lsp_status = monitoring_service.get_lsp_detailed_status()
+        return jsonify(lsp_status)
+
     # Register the blueprint with the app
     app.register_blueprint(admin_bp)
