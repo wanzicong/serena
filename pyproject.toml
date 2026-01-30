@@ -190,6 +190,7 @@ select = [
 ]
 ignore = [
   "PLC0415",
+  "RUF001",
   "RUF002",
   "RUF005",
   "RUF059",

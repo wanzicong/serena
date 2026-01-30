@@ -83,5 +83,23 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         tools = tool_service.get_all_tools()
         return render_template("tools/list.html", tools=tools)
 
+    @admin_bp.route("/tools/toggle", methods=["POST"])
+    def toggle_tool() -> tuple[Response, int]:
+        """Toggle tool enabled/disabled."""
+        data = request.get_json()
+        tool_name = data.get("tool_name")
+        enabled = data.get("enabled")
+
+        if not tool_name or enabled is None:
+            return jsonify({"status": "error", "message": "缺少参数"}), 400
+
+        try:
+            tool_service.toggle_tool(tool_name, enabled)
+            return jsonify({"status": "success", "message": f"工具 '{tool_name}' 已{'启用' if enabled else '禁用'}"}), 200
+        except NotImplementedError:
+            return jsonify({"status": "error", "message": "工具切换功能尚未实现，需要修改项目配置文件"}), 501
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"操作失败: {e!s}"}), 500
+
     # Register the blueprint with the app
     app.register_blueprint(admin_bp)
