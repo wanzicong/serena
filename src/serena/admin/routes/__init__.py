@@ -1,6 +1,6 @@
 """Admin route definitions"""
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from flask import Blueprint, Flask
 
