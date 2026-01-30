@@ -99,3 +99,139 @@ class MonitoringService:
             )
 
         return lsp_info
+
+    def get_logs(self, limit: int = 100) -> list[dict[str, Any]]:
+        """
+        Get recent log entries.
+
+        Args:
+            limit: Maximum number of log entries to return
+
+        Returns:
+            A list of dictionaries containing log information including:
+            - timestamp: Log timestamp
+            - level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+            - logger: Logger name
+            - message: Log message
+
+        """
+        import os
+
+        logs = []
+
+        # Try to get logs from a log file if it exists
+        log_file = self._get_log_file()
+        if log_file and os.path.exists(log_file):
+            try:
+                with open(log_file, encoding="utf-8") as f:
+                    lines = f.readlines()
+                    # Get the last 'limit' lines
+                    for line in lines[-limit:]:
+                        log_entry = self._parse_log_line(line)
+                        if log_entry:
+                            logs.append(log_entry)
+            except Exception:
+                pass
+
+        # If no logs from file, return some default system logs
+        if not logs:
+            logs = self._get_system_logs(limit)
+
+        return logs
+
+    def _get_log_file(self) -> str | None:
+        """Get the path to the log file if configured."""
+        import os
+
+        # Check common log file locations
+        possible_paths = [
+            "serena.log",
+            "logs/serena.log",
+            ".serena/logs/serena.log",
+            os.path.expanduser("~/.serena/logs/serena.log"),
+        ]
+
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+
+        return None
+
+    def _parse_log_line(self, line: str) -> dict[str, Any] | None:
+        """
+        Parse a log line into structured data.
+
+        Args:
+            line: Raw log line
+
+        Returns:
+            Dictionary with parsed log data or None if parsing fails
+
+        """
+        import re
+
+        # Try to match standard Python log format
+        # Example: 2024-01-01 12:00:00,123 - INFO - serena.agent - Message
+        pattern = r"(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}[,\.]\d+)\s*-\s*(\w+)\s*-\s*(\S+)\s*-\s*(.+)"
+        match = re.match(pattern, line.strip())
+
+        if match:
+            return {"timestamp": match.group(1), "level": match.group(2), "logger": match.group(3), "message": match.group(4)}
+
+        # If line doesn't match standard format, return as-is with INFO level
+        if line.strip():
+            return {"timestamp": "", "level": "INFO", "logger": "system", "message": line.strip()}
+
+        return None
+
+    def _get_system_logs(self, limit: int) -> list[dict[str, Any]]:
+        """
+        Get system-generated logs as fallback.
+
+        Args:
+            limit: Maximum number of log entries
+
+        Returns:
+            List of log entry dictionaries
+
+        """
+        from datetime import datetime
+
+        logs = []
+
+        # Add some system status logs
+        active_project = self._agent.get_active_project()
+        lsp_languages = self._agent.get_active_lsp_languages()
+        current_tasks = self._agent.get_current_tasks()
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        logs.append(
+            {
+                "timestamp": timestamp,
+                "level": "INFO",
+                "logger": "system",
+                "message": f"活跃项目: {active_project.project_name if active_project else '无'}",
+            }
+        )
+
+        logs.append({"timestamp": timestamp, "level": "INFO", "logger": "system", "message": f"LSP 服务器数量: {len(lsp_languages)}"})
+
+        logs.append({"timestamp": timestamp, "level": "INFO", "logger": "system", "message": f"活跃任务数量: {len(current_tasks)}"})
+
+        if lsp_languages:
+            for lang in lsp_languages:
+                logs.append({"timestamp": timestamp, "level": "INFO", "logger": "lsp", "message": f"LSP 语言服务器运行中: {lang.value}"})
+
+        if current_tasks:
+            for task in current_tasks:
+                logs.append(
+                    {
+                        "timestamp": timestamp,
+                        "level": "INFO",
+                        "logger": "tasks",
+                        "message": f"任务: {task.name} - {'运行中' if task.is_running else '已完成'}",
+                    }
+                )
+
+        return logs[:limit]

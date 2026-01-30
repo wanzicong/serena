@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}日志查看 - Serena Admin{% endblock %}
+
+{% block content %}
+<h2>系统日志</h2>
+
+<div class="logs-page">
+    <div class="logs-controls">
+        <div class="control-group">
+            <label for="limit-select">显示条数:</label>
+            <select id="limit-select" class="form-select">
+                <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
+                <option value="200" {% if limit == 200 %}selected{% endif %}>200</option>
+                <option value="500" {% if limit == 500 %}selected{% endif %}>500</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <button id="refresh-btn" class="btn btn-primary">刷新日志</button>
+            <button id="auto-refresh-toggle" class="btn btn-secondary">自动刷新: 关</button>
+        </div>
+        
+        <div class="control-group">
+            <label for="level-filter">日志级别:</label>
+            <select id="level-filter" class="form-select">
+                <option value="">全部</option>
+                <option value="DEBUG">DEBUG</option>
+                <option value="INFO">INFO</option>
+                <option value="WARNING">WARNING</option>
+                <option value="ERROR">ERROR</option>
+                <option value="CRITICAL">CRITICAL</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="logs-stats">
+        <span class="stat-item">总计: <strong id="total-count">{{ logs|length }}</strong> 条</span>
+        <span class="stat-item">DEBUG: <strong id="debug-count">{{ logs|selectattr('level', 'equalto', 'DEBUG')|list|length }}</strong></span>
+        <span class="stat-item">INFO: <strong id="info-count">{{ logs|selectattr('level', 'equalto', 'INFO')|list|length }}</strong></span>
+        <span class="stat-item">WARNING: <strong id="warning-count">{{ logs|selectattr('level', 'equalto', 'WARNING')|list|length }}</strong></span>
+        <span class="stat-item">ERROR: <strong id="error-count">{{ logs|selectattr('level', 'equalto', 'ERROR')|list|length }}</strong></span>
+    </div>
+
+    <div class="logs-container" id="logs-container">
+        {% if logs %}
+        <table class="logs-table">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>级别</th>
+                    <th>记录器</th>
+                    <th>消息</th>
+                </tr>
+            </thead>
+            <tbody id="logs-body">
+                {% for log in logs %}
+                <tr class="log-row log-{{ log.level|lower }}" data-level="{{ log.level }}">
+                    <td class="log-time">{{ log.timestamp or '-' }}</td>
+                    <td class="log-level">
+                        <span class="badge badge-{{ log.level|lower }}">{{ log.level }}</span>
+                    </td>
+                    <td class="log-logger">{{ log.logger }}</td>
+                    <td class="log-message">{{ log.message }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <h4>暂无日志</h4>
+            <p>当前没有可显示的日志记录。</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let autoRefreshInterval = null;
+    let autoRefreshEnabled = false;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Limit selector
+        const limitSelect = document.getElementById('limit-select');
+        if (limitSelect) {
+            limitSelect.addEventListener('change', function() {
+                const limit = this.value;
+                window.location.href = `/admin/monitoring/logs?limit=${limit}`;
+            });
+        }
+
+        // Level filter
+        const levelFilter = document.getElementById('level-filter');
+        if (levelFilter) {
+            levelFilter.addEventListener('change', filterLogsByLevel);
+        }
+
+        // Refresh button
+        const refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', refreshLogs);
+        }
+
+        // Auto-refresh toggle
+        const autoRefreshToggle = document.getElementById('auto-refresh-toggle');
+        if (autoRefreshToggle) {
+            autoRefreshToggle.addEventListener('click', toggleAutoRefresh);
+        }
+    });
+
+    function filterLogsByLevel() {
+        const level = document.getElementById('level-filter').value;
+        const rows = document.querySelectorAll('.log-row');
+        
+        rows.forEach(row => {
+            if (!level || row.dataset.level === level) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    function refreshLogs() {
+        const limit = document.getElementById('limit-select').value;
+        const refreshBtn = document.getElementById('refresh-btn');
+        const originalText = refreshBtn.textContent;
+        
+        refreshBtn.textContent = '加载中...';
+        refreshBtn.disabled = true;
+
+        fetch(`/admin/api/logs?limit=${limit}`)
+            .then(response => response.json())
+            .then(data => {
+                updateLogsTable(data.logs);
+                showToast('success', '日志已刷新');
+            })
+            .catch(error => {
+                console.error('Error loading logs:', error);
+                showToast('error', '加载日志失败');
+            })
+            .finally(() => {
+                refreshBtn.textContent = originalText;
+                refreshBtn.disabled = false;
+            });
+    }
+
+    function updateLogsTable(logs) {
+        const tbody = document.getElementById('logs-body');
+        if (!tbody) return;
+
+        // Clear existing rows
+        tbody.innerHTML = '';
+
+        // Add new rows
+        logs.forEach(log => {
+            const row = document.createElement('tr');
+            row.className = `log-row log-${log.level.toLowerCase()}`;
+            row.dataset.level = log.level;
+
+            const timeCell = document.createElement('td');
+            timeCell.className = 'log-time';
+            timeCell.textContent = log.timestamp || '-';
+
+            const levelCell = document.createElement('td');
+            levelCell.className = 'log-level';
+            levelCell.innerHTML = `<span class="badge badge-${log.level.toLowerCase()}">${log.level}</span>`;
+
+            const loggerCell = document.createElement('td');
+            loggerCell.className = 'log-logger';
+            loggerCell.textContent = log.logger;
+
+            const messageCell = document.createElement('td');
+            messageCell.className = 'log-message';
+            messageCell.textContent = log.message;
+
+            row.appendChild(timeCell);
+            row.appendChild(levelCell);
+            row.appendChild(loggerCell);
+            row.appendChild(messageCell);
+
+            tbody.appendChild(row);
+        });
+
+        // Update stats
+        document.getElementById('total-count').textContent = logs.length;
+        document.getElementById('debug-count').textContent = logs.filter(l => l.level === 'DEBUG').length;
+        document.getElementById('info-count').textContent = logs.filter(l => l.level === 'INFO').length;
+        document.getElementById('warning-count').textContent = logs.filter(l => l.level === 'WARNING').length;
+        document.getElementById('error-count').textContent = logs.filter(l => l.level === 'ERROR').length;
+
+        // Re-apply filter if set
+        const levelFilter = document.getElementById('level-filter');
+        if (levelFilter && levelFilter.value) {
+            filterLogsByLevel();
+        }
+    }
+
+    function toggleAutoRefresh() {
+        const button = document.getElementById('auto-refresh-toggle');
+        
+        if (autoRefreshEnabled) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshEnabled = false;
+            button.textContent = '自动刷新: 关';
+            button.classList.remove('btn-success');
+            button.classList.add('btn-secondary');
+        } else {
+            autoRefreshInterval = setInterval(refreshLogs, 5000);
+            autoRefreshEnabled = true;
+            button.textContent = '自动刷新: 开';
+            button.classList.remove('btn-secondary');
+            button.classList.add('btn-success');
+        }
+    }
+
+    function showToast(type, message) {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+</script>
+{% endblock %}

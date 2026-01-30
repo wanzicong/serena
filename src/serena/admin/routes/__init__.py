@@ -109,6 +109,20 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         config_overview = config_service.get_config_overview()
         return render_template("config/overview.html", config_overview=config_overview)
 
+    @admin_bp.route("/monitoring/logs")
+    def logs_page() -> str:
+        """Render the logs viewer page."""
+        limit = request.args.get("limit", 100, type=int)
+        logs = monitoring_service.get_logs(limit)
+        return render_template("monitoring/logs.html", logs=logs, limit=limit)
+
+    @admin_bp.route("/api/logs")
+    def api_logs() -> Response:
+        """Get logs as JSON for AJAX requests."""
+        limit = request.args.get("limit", 100, type=int)
+        logs = monitoring_service.get_logs(limit)
+        return jsonify({"logs": logs})
+
     @admin_bp.route("/monitoring")
     def monitoring_overview() -> str:
         """Render the system monitoring overview page."""
