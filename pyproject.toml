@@ -275,6 +275,7 @@ max-complexity = 20
 "scripts/**" = ["D103"]
 
 [tool.pytest.ini_options]
+pythonpath = "src"
 addopts = "--snapshot-patch-pycharm-diff"
 markers = [
   "clojure: language server running for Clojure",
