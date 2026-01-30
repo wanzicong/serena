@@ -70,6 +70,37 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         except Exception as e:
             return jsonify({"status": "error", "message": f"删除项目时出错: {e!s}"}), 500
 
+    @admin_bp.route("/projects/new")
+    def projects_new() -> str:
+        """Render the new project creation page."""
+        languages = project_service.get_available_languages()
+        return render_template("projects/new.html", languages=languages)
+
+    @admin_bp.route("/projects/create", methods=["POST"])
+    def create_project() -> tuple[Response, int] | Response:
+        """Create a new project from a given path."""
+        data = request.get_json()
+        project_path = data.get("project_path")
+
+        if not project_path:
+            return jsonify({"status": "error", "message": "项目路径不能为空"}), 400
+
+        try:
+            project_info = project_service.create_project(project_path)
+            return jsonify(
+                {
+                    "status": "success",
+                    "message": f"项目 '{project_info['name']}' 已创建",
+                    "project": project_info,
+                }
+            )
+        except FileNotFoundError as e:
+            return jsonify({"status": "error", "message": str(e)}), 404
+        except FileExistsError as e:
+            return jsonify({"status": "error", "message": str(e)}), 409
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"创建项目时出错: {e!s}"}), 500
+
     @admin_bp.route("/api/active-project")
     def get_active_project() -> Response:
         """Get the currently active project."""

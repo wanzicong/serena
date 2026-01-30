@@ -81,3 +81,47 @@ class ProjectService:
         """
         config = self._agent.serena_config
         config.remove_project(project_name)
+
+    def create_project(self, project_path: str) -> dict[str, Any]:
+        """
+        Create a new project from a given path.
+
+        Args:
+            project_path: The path to the project to add
+
+        Returns:
+            A dictionary containing the created project information
+
+        Raises:
+            FileNotFoundError: If the path does not exist or is not a directory
+            FileExistsError: If a project already exists at the path
+
+        """
+        from pathlib import Path
+
+        config = self._agent.serena_config
+
+        # Add project from path
+        project_path_obj = Path(project_path).resolve()
+        new_project = config.add_project_from_path(project_path_obj)
+
+        # Return project info
+        return {
+            "name": new_project.project_name,
+            "path": str(new_project.project_root),
+            "languages": [lang.value for lang in new_project.project_config.languages],
+            "is_active": True,
+            "read_only": new_project.project_config.read_only,
+        }
+
+    def get_available_languages(self) -> list[str]:
+        """
+        Get list of available programming languages supported by Serena.
+
+        Returns:
+            A list of language names
+
+        """
+        from serena.config.ls_config import Language
+
+        return [lang.value for lang in Language]
