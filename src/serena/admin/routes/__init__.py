@@ -31,6 +31,8 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         projects = project_service.get_all_projects()
         return render_template("projects/list.html", projects=projects)
 
+    # Note: activate and delete routes implemented here for complete UX
+    # Originally planned for Task 4, but implemented early for better user experience
     @admin_bp.route("/projects/activate", methods=["POST"])
     def activate_project() -> tuple[Response, int] | Response:
         """Activate a project by name."""
