@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Serena Admin{% endblock %}</title>
+    <link rel="stylesheet" href="/admin/static/admin.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <h1>Serena Admin</h1>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/admin/projects">项目</a></li>
+            <li><a href="/admin/tools">工具</a></li>
+            <li><a href="/admin/config">配置</a></li>
+            <li><a href="/admin/monitoring">监控</a></li>
+        </ul>
+        <div class="nav-right">
+            <span id="active-project">加载中...</span>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="/admin/static/admin.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
