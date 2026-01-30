@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}项目管理 - Serena Admin{% endblock %}
+
+{% block content %}
+<h2>项目管理</h2>
+
+{% if projects %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>项目名称</th>
+            <th>路径</th>
+            <th>语言</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for project in projects %}
+        <tr class="{{ 'active' if project.is_active else '' }}">
+            <td><strong>{{ project.name }}</strong></td>
+            <td><code>{{ project.path }}</code></td>
+            <td>{{ project.languages | join(', ') }}</td>
+            <td>
+                {% if project.is_active %}
+                <span class="badge badge-success">活跃</span>
+                {% else %}
+                    <span class="badge badge-secondary">未激活</span>
+                {% endif %}
+                {% if project.read_only %}
+                <span class="badge badge-secondary">只读</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if not project.is_active %}
+                <button onclick="activateProject('{{ project.name }}')">激活</button>
+                {% endif %}
+                <button onclick="editProject('{{ project.name }}')">编辑</button>
+                <button onclick="deleteProject('{{ project.name }}')" class="danger">删除</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <h3>暂无项目</h3>
+    <p>您还没有注册任何项目。点击下面的按钮添加一个新项目。</p>
+</div>
+{% endif %}
+
+<div class="actions">
+    <a href="/admin/projects/new" class="btn btn-primary">添加新项目</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('admin.static', filename='admin.js') }}"></script>
+{% endblock %}
