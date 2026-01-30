@@ -87,9 +87,10 @@
         <h3>支持的语言</h3>
         <div class="languages-grid">
             {% for lang in lsp_status.supported_languages %}
-            <div class="language-tag {% if lsp_status.servers and lsp_status.servers|map(attribute='language')|list|contains(lang) %}language-active{% endif %}">
+            {% set active_languages = lsp_status.servers|map(attribute='language')|list %}
+            <div class="language-tag {% if lsp_status.servers and lang in active_languages %}language-active{% endif %}">
                 <span class="lang-name">{{ lang }}</span>
-                {% if lsp_status.servers and lsp_status.servers|map(attribute='language')|list|contains(lang) %}
+                {% if lsp_status.servers and lang in active_languages %}
                 <span class="lang-indicator">●</span>
                 {% endif %}
             </div>
