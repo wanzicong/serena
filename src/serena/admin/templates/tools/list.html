@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}工具管理 - Serena Admin{% endblock %}
+
+{% block content %}
+<h2>工具管理</h2>
+
+{% if tools %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>工具名称</th>
+            <th>状态</th>
+            <th>调用次数</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tool in tools %}
+        <tr>
+            <td><strong>{{ tool.name }}</strong></td>
+            <td>
+                {% if tool.is_active %}
+                <span class="badge badge-success">活跃</span>
+                {% else %}
+                <span class="badge badge-secondary">未激活</span>
+                {% endif %}
+            </td>
+            <td>{{ tool.calls }} 次</td>
+            <td>
+                {% if tool.is_active %}
+                <button onclick="toggleTool('{{ tool.name }}', false)">禁用</button>
+                {% else %}
+                <button onclick="toggleTool('{{ tool.name }}', true)">启用</button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <h3>暂无工具</h3>
+    <p>当前没有可用的工具。</p>
+</div>
+{% endif %}
+
+<div class="stats-summary">
+    <div class="stat-card">
+        <div class="stat-label">总工具数</div>
+        <div class="stat-value">{{ tools | length }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">活跃工具</div>
+        <div class="stat-value">{{ tools | selectattr('is_active') | list | length }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">总调用次数</div>
+        <div class="stat-value">{{ tools | sum(attribute='calls') }}</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('admin.static', filename='admin.js') }}"></script>
+<script>
+function toggleTool(toolName, enabled) {
+    if (!enabled) {
+        if (!confirm(`确定要禁用工具 "${toolName}" 吗？`)) {
+            return;
+        }
+    }
+
+    fetch('/admin/tools/toggle', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            tool_name: toolName,
+            enabled: enabled
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('操作失败: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('请求失败: ' + error);
+    });
+}
+</script>
+{% endblock %}

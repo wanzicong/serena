@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from flask import Blueprint, Flask, Response, jsonify, render_template, request
 
-from serena.admin.services import get_project_service
+from serena.admin.services import get_project_service, get_tool_service
 
 if TYPE_CHECKING:
     from serena.agent import SerenaAgent
@@ -22,8 +22,9 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
     # Create a blueprint for admin routes
     admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
-    # Get project service instance
+    # Get service instances
     project_service = get_project_service(agent)
+    tool_service = get_tool_service(agent)
 
     @admin_bp.route("/projects")
     def projects_list() -> str:
@@ -75,6 +76,12 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
             return jsonify({"project_name": active_project.project_name, "project_path": str(active_project.project_root)})
         else:
             return jsonify({"project_name": None, "project_path": None})
+
+    @admin_bp.route("/tools")
+    def tools_list() -> str:
+        """Render the tools list page."""
+        tools = tool_service.get_all_tools()
+        return render_template("tools/list.html", tools=tools)
 
     # Register the blueprint with the app
     app.register_blueprint(admin_bp)
