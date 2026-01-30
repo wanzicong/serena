@@ -608,15 +608,264 @@ h2 {
     background: #1e7e34;
 }
 
-/* Responsive adjustments */
+/* Tool Statistics Page */
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.overview-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.overview-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.overview-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.overview-content {
+    flex: 1;
+}
+
+.overview-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.overview-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+/* Statistics Sections */
+.stats-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin: 2rem 0;
+}
+
+.stats-section h3 {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Bar Chart */
+.chart-container {
+    margin: 1rem 0;
+}
+
+.bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.bar-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bar-label {
+    min-width: 150px;
+    font-size: 0.9rem;
+    color: #495057;
+    font-weight: 500;
+    padding-right: 1rem;
+    word-break: break-word;
+}
+
+.bar-wrapper {
+    flex: 1;
+    background: #f8f9fa;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    height: 32px;
+}
+
+.bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.75rem;
+    transition: width 0.3s ease;
+    min-width: 0;
+}
+
+.bar-value {
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Token Distribution Chart */
+.token-distribution {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+}
+
+.token-chart {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* Donut Chart */
+.donut-chart {
+    position: relative;
+    width: 200px;
+    height: 200px;
+}
+
+.donut {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.donut-segment {
+    fill: none;
+    stroke-width: 3;
+}
+
+.donut-input {
+    stroke: #667eea;
+}
+
+.donut-output {
+    stroke: #764ba2;
+}
+
+.donut-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.donut-total {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.donut-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Legend */
+.legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.legend-input {
+    background: #667eea;
+}
+
+.legend-output {
+    background: #764ba2;
+}
+
+.legend-label {
+    color: #495057;
+}
+
+/* Responsive adjustments for stats page */
 @media (max-width: 768px) {
     .logs-controls {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .logs-stats {
         flex-direction: column;
         gap: 0.5rem;
+    }
+
+    .stats-overview {
+        grid-template-columns: 1fr;
+    }
+
+    .bar-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .bar-label {
+        min-width: auto;
+        padding-right: 0;
+    }
+
+    .token-chart {
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .donut-chart {
+        width: 160px;
+        height: 160px;
+    }
+
+    .donut-total {
+        font-size: 1.5rem;
     }
 }

@@ -169,6 +169,12 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         except Exception as e:
             return jsonify({"status": "error", "message": f"操作失败: {e!s}"}), 500
 
+    @admin_bp.route("/tools/stats")
+    def tools_stats() -> str:
+        """Render the tools statistics page."""
+        stats = tool_service.get_tool_statistics()
+        return render_template("tools/stats.html", stats=stats)
+
     @admin_bp.route("/config")
     def config_overview() -> str:
         """Render the configuration overview page."""

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}工具统计 - Serena Admin{% endblock %}
+
+{% block content %}
+<h2>工具使用统计</h2>
+
+<!-- 概览卡片 -->
+<div class="stats-overview">
+    <div class="overview-card">
+        <div class="overview-icon">T</div>
+        <div class="overview-content">
+            <div class="overview-label">总工具数</div>
+            <div class="overview-value">{{ stats.total_tools }}</div>
+        </div>
+    </div>
+    <div class="overview-card">
+        <div class="overview-icon">A</div>
+        <div class="overview-content">
+            <div class="overview-label">活跃工具</div>
+            <div class="overview-value">{{ stats.active_tools }}</div>
+        </div>
+    </div>
+    <div class="overview-card">
+        <div class="overview-icon">C</div>
+        <div class="overview-content">
+            <div class="overview-label">总调用次数</div>
+            <div class="overview-value">{{ stats.total_calls }}</div>
+        </div>
+    </div>
+    <div class="overview-card">
+        <div class="overview-icon">K</div>
+        <div class="overview-content">
+            <div class="overview-label">总 Token 数</div>
+            <div class="overview-value">{{ stats.total_tokens }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Token 估算器信息 -->
+<div class="info-box">
+    <h4>Token 估算器</h4>
+    <p>当前使用的 Token 估算方法: <code>{{ stats.token_estimator_name }}</code></p>
+</div>
+
+<!-- 最常用工具 -->
+{% if stats.most_used_tools and stats.most_used_tools[0].calls > 0 %}
+<section class="stats-section">
+    <h3>最常用工具 (Top 5)</h3>
+    <div class="chart-container">
+        <div class="bar-chart">
+            {% for tool in stats.most_used_tools %}
+            <div class="bar-item">
+                <div class="bar-label">{{ tool.name }}</div>
+                <div class="bar-wrapper">
+                    <div class="bar-fill" style="width: {{ (tool.calls / stats.most_used_tools[0].calls * 100)|round }}%">
+                        <span class="bar-value">{{ tool.calls }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% else %}
+<div class="empty-state">
+    <h3>暂无使用数据</h3>
+    <p>工具尚未被调用，统计图表将在有使用数据后显示。</p>
+</div>
+{% endif %}
+
+<!-- Token 使用分布 -->
+{% if stats.total_tokens > 0 %}
+<section class="stats-section">
+    <h3>Token 使用分布</h3>
+    <div class="token-distribution">
+        <div class="token-chart">
+            <div class="donut-chart">
+                <svg viewBox="0 0 36 36" class="donut">
+                    {% set input_pct = (stats.total_input_tokens / stats.total_tokens * 100)|round %}
+                    {% set output_pct = (stats.total_output_tokens / stats.total_tokens * 100)|round %}
+                    <path class="donut-segment donut-input"
+                          stroke-dasharray="{{ input_pct }} 100"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="donut-segment donut-output"
+                          stroke-dasharray="{{ output_pct }} 100"
+                          stroke-dashoffset="-{{ input_pct }}"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <div class="donut-center">
+                    <div class="donut-total">{{ stats.total_tokens }}</div>
+                    <div class="donut-label">总 Token</div>
+                </div>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <span class="legend-color legend-input"></span>
+                    <span class="legend-label">输入 Token: {{ stats.total_input_tokens }} ({{ input_pct }}%)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color legend-output"></span>
+                    <span class="legend-label">输出 Token: {{ stats.total_output_tokens }} ({{ output_pct }}%)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- 详细统计表 -->
+<section class="stats-section">
+    <h3>详细统计</h3>
+    {% if stats.tools %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>工具名称</th>
+                <th>状态</th>
+                <th>调用次数</th>
+                <th>输入 Token</th>
+                <th>输出 Token</th>
+                <th>总 Token</th>
+                <th>平均输入</th>
+                <th>平均输出</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tool in stats.tools %}
+            <tr>
+                <td><strong>{{ tool.name }}</strong></td>
+                <td>
+                    {% if tool.is_active %}
+                    <span class="badge badge-success">活跃</span>
+                    {% else %}
+                    <span class="badge badge-secondary">未激活</span>
+                    {% endif %}
+                </td>
+                <td>{{ tool.calls }}</td>
+                <td>{{ tool.input_tokens }}</td>
+                <td>{{ tool.output_tokens }}</td>
+                <td><strong>{{ tool.total_tokens }}</strong></td>
+                <td>{{ tool.avg_input_tokens }}</td>
+                <td>{{ tool.avg_output_tokens }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <h3>暂无工具数据</h3>
+        <p>当前没有可用的工具。</p>
+    </div>
+    {% endif %}
+</section>
+
+<div class="actions">
+    <a href="/admin/tools" class="btn btn-primary">返回工具列表</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('admin.static', filename='admin.js') }}"></script>
+{% endblock %}
