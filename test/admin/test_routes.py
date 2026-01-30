@@ -187,8 +187,9 @@ class TestIntegration:
 
         mock_agent.serena_config.add_project_from_path.return_value = mock_new_project
 
-        # 使用当前目录（存在的路径）
+        # 使用当前目录 (存在的路径)
         from pathlib import Path
+
         current_path = str(Path.cwd())
 
         create_response = client.post("/admin/projects/create", json={"project_path": current_path})
@@ -200,7 +201,7 @@ class TestIntegration:
         assert create_data["project"]["name"] == "new_test_project"
         mock_agent.serena_config.add_project_from_path.assert_called_once()
 
-        # 2. 测试读取项目列表 - 跳过模板渲染测试，只验证 API 端点存在
+        # 2. 测试读取项目列表 - 跳过模板渲染测试, 只验证 API 端点存在
         mock_agent.serena_config.projects = [mock_new_project]
         app = client.application
         rule_found = False
@@ -261,7 +262,7 @@ class TestIntegration:
         assert rule_found, "工具列表路由不存在"
 
         # 2. 测试切换工具状态
-        # 由于工具切换功能尚未实现，应该返回 501 错误
+        # 由于工具切换功能尚未实现, 应该返回 501 错误
         toggle_response = client.post("/admin/tools/toggle", json={"tool_name": "write_file", "enabled": True})
 
         assert toggle_response.status_code == 501
@@ -280,7 +281,7 @@ class TestIntegration:
                 break
         assert rule_found, "配置概览路由不存在"
 
-        # 2. 验证项目更新路由存在（配置编辑通过项目更新实现）
+        # 2. 验证项目更新路由存在 (配置编辑通过项目更新实现)
         rule_found = False
         for rule in app.url_map.iter_rules():
             if rule.rule == "/admin/projects/update" and "POST" in rule.methods:
