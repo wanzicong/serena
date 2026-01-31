@@ -409,3 +409,18 @@ class TestIntegration:
         data = response.get_json()
         assert data["project_name"] is None
         assert data["project_path"] is None
+
+
+class TestToolsExecuteList:
+    """测试工具列表页面路由"""
+
+    def test_tools_execute_list_route(self, client: "FlaskClient") -> None:
+        """测试工具列表路由"""
+        # 验证路由存在
+        app = client.application
+        rule_found = False
+        for rule in app.url_map.iter_rules():
+            if rule.rule == "/admin/tools/execute" and "GET" in rule.methods:
+                rule_found = True
+                break
+        assert rule_found, "工具列表路由不存在"

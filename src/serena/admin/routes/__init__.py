@@ -7,7 +7,7 @@ from flask import Blueprint, Flask, Response, jsonify, render_template, request
 from pydantic import ValidationError
 
 from serena.admin.error_handlers import register_error_handlers
-from serena.admin.services import get_config_service, get_monitoring_service, get_project_service, get_tool_service
+from serena.admin.services import get_config_service, get_monitoring_service, get_project_service, get_tool_executor_service, get_tool_service
 from serena.admin.validators import (
     ProjectActionRequest,
     ProjectCreateRequest,
@@ -43,6 +43,7 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
     project_service = get_project_service(agent)
     tool_service = get_tool_service(agent)
     monitoring_service = get_monitoring_service(agent)
+    tool_executor_service = get_tool_executor_service(agent)
 
     @admin_bp.route("/")
     def admin_home() -> str:
@@ -232,6 +233,55 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         """Get LSP status as JSON for AJAX requests."""
         lsp_status = monitoring_service.get_lsp_detailed_status()
         return jsonify(lsp_status)
+
+    @admin_bp.route("/tools/execute")
+    def tools_execute_list() -> str:
+        """Render the tools execution list page."""
+        tools = tool_executor_service.get_all_tools()
+        # 按类别分组
+        categorized_tools = _categorize_tools(tools)
+        return render_template("tools/execute_list.html", categorized_tools=categorized_tools)
+
+    def _categorize_tools(tools: list[dict]) -> dict[str, list[dict]]:
+        """将工具按类别分组。
+
+        Args:
+            tools: 工具列表
+
+        Returns:
+            按类别分组的工具字典
+        """
+        categories = {
+            "文件操作": [],
+            "符号操作": [],
+            "内存管理": [],
+            "配置管理": [],
+            "编辑操作": [],
+            "其他工具": [],
+        }
+
+        file_tools = {"read_file", "create_text_file", "replace_content", "list_dir", "find_file"}
+        symbol_tools = {"find_symbol", "find_referencing_symbols", "get_symbols_overview", "rename_symbol"}
+        memory_tools = {"list_memories", "read_memory", "write_memory", "edit_memory", "delete_memory"}
+        config_tools = {"activate_project", "switch_modes", "get_current_config"}
+        edit_tools = {"replace_symbol_body", "insert_after_symbol", "insert_before_symbol"}
+
+        for tool in tools:
+            name = tool["name"]
+            if name in file_tools:
+                categories["文件操作"].append(tool)
+            elif name in symbol_tools:
+                categories["符号操作"].append(tool)
+            elif name in memory_tools:
+                categories["内存管理"].append(tool)
+            elif name in config_tools:
+                categories["配置管理"].append(tool)
+            elif name in edit_tools:
+                categories["编辑操作"].append(tool)
+            else:
+                categories["其他工具"].append(tool)
+
+        return categories
 
     # Register the blueprint with the app
     app.register_blueprint(admin_bp)
