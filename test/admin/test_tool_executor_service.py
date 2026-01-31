@@ -79,3 +79,19 @@ def test_execute_tool_success():
     assert result["content"] == "file content here"
     assert "metadata" in result
 
+
+def test_extract_parameters_from_tool():
+    """测试从工具提取参数"""
+    mock_agent = MagicMock()
+    mock_tool = MagicMock()
+    mock_tool.get_name.return_value = "read_file"
+    mock_agent._all_tools = {"read_file": mock_tool}
+
+    from serena.admin.services.tool_executor_service import get_tool_executor_service
+
+    service = get_tool_executor_service(mock_agent)
+    params = service.get_tool_schema("read_file")
+
+    assert "parameters" in params
+    assert isinstance(params["parameters"], dict)
+

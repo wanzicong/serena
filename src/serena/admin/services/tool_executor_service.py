@@ -1,5 +1,6 @@
 """Tool executor service for admin dashboard."""
 
+import inspect
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -102,9 +103,40 @@ class ToolExecutorService:
             }
 
     def _extract_parameters(self, tool: Any) -> dict[str, Any]:
-        """Extract parameter schema from tool."""
-        # Placeholder - will be implemented in next task
-        return {}
+        """Extract parameter schema from tool.
+
+        Args:
+            tool: The tool instance
+
+        Returns:
+            A dictionary mapping parameter names to their schema
+        """
+        try:
+            # Get the run method's signature
+            sig = inspect.signature(tool.run)
+            parameters = {}
+
+            for param_name, param in sig.parameters.items():
+                if param_name == "self":
+                    continue
+
+                param_schema = {
+                    "type": str(param.annotation) if param.annotation != inspect.Parameter.empty else "string",
+                    "required": param.default == inspect.Parameter.empty,
+                    "default": param.default if param.default != inspect.Parameter.empty else None,
+                }
+
+                # Add description if available
+                if hasattr(tool, "__doc__") and tool.__doc__:
+                    # Try to extract parameter descriptions from docstring
+                    param_schema["description"] = f"Parameter: {param_name}"
+
+                parameters[param_name] = param_schema
+
+            return parameters
+        except Exception:
+            # Fallback: return empty schema
+            return {}
 
 
 # Singleton instance
