@@ -8,13 +8,24 @@
 <form id="create-project-form" class="form">
     <div class="form-group">
         <label for="project-path">项目路径 <span class="required">*</span></label>
-        <input
-            type="text"
-            id="project-path"
-            name="project_path"
-            required
-            placeholder="输入项目根目录的绝对路径，例如: C:\Users\YourName\Projects\MyProject"
-        >
+        <div class="input-group">
+            <input
+                type="text"
+                id="project-path"
+                name="project_path"
+                required
+                placeholder="输入项目根目录的绝对路径，例如: C:\Users\YourName\Projects\MyProject"
+                readonly
+            >
+            <button type="button" class="btn btn-browse" id="browse-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                </svg>
+                浏览文件夹
+            </button>
+            <input type="file" id="folder-selector" webkitdirectory directory style="display: none;">
+        </div>
         <small class="form-help">
             请提供项目根目录的绝对路径。Serena 将自动检测项目配置和编程语言。
         </small>
@@ -41,23 +52,68 @@
 
 {% block scripts %}
 <script>
+// 文件夹选择器功能
+const browseBtn = document.getElementById('browse-btn');
+const folderSelector = document.getElementById('folder-selector');
+const projectPathInput = document.getElementById('project-path');
+
+browseBtn.addEventListener('click', function() {
+    folderSelector.click();
+});
+
+folderSelector.addEventListener('change', function(e) {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+        // 获取第一个文件的路径，它包含文件夹路径
+        const firstFile = files[0];
+        const fullPath = firstFile.webkitRelativePath || firstFile.name;
+
+        // 从路径中提取文件夹路径（去除文件名）
+        const pathParts = fullPath.split('/');
+        if (pathParts.length > 1) {
+            // 获取文件夹部分
+            const folderPath = pathParts.slice(0, -1).join('/');
+
+            // 在 Windows 上，需要转换路径格式
+            // 如果用户选择了 C:/Users/xxx/project，我们尽量获取完整路径
+            // 注意：出于安全原因，浏览器不会返回完整的本地路径
+            // 我们只能获取相对路径或文件夹名
+
+            // 尝试获取更准确的路径
+            let displayPath = folderPath;
+
+            // 如果只有文件夹名，提示用户输入完整路径
+            if (!displayPath.includes(':') && !displayPath.startsWith('/')) {
+                // 只有文件夹名的情况
+                showMessage('info', `已选择文件夹: ${displayPath}\\n\\n由于浏览器安全限制，请手动输入完整路径，例如: C:\\\\Users\\\\YourName\\\\${displayPath}`);
+                projectPathInput.value = '';
+                projectPathInput.readOnly = false;
+                projectPathInput.placeholder = `请输入完整路径，例如: C:\\Users\\YourName\\${displayPath}`;
+            } else {
+                projectPathInput.value = displayPath;
+                projectPathInput.readOnly = true;
+            }
+        }
+    }
+});
+
 document.getElementById('create-project-form').addEventListener('submit', async function(e) {
     e.preventDefault();
-    
+
     const projectPath = document.getElementById('project-path').value.trim();
     const messageDiv = document.getElementById('form-message');
     const submitBtn = this.querySelector('button[type="submit"]');
-    
+
     // 基本验证
     if (!projectPath) {
         showMessage('error', '请输入项目路径');
         return;
     }
-    
+
     // 禁用提交按钮
     submitBtn.disabled = true;
     submitBtn.textContent = '创建中...';
-    
+
     try {
         const response = await fetch('/admin/projects/create', {
             method: 'POST',
@@ -68,12 +124,12 @@ document.getElementById('create-project-form').addEventListener('submit', async 
                 project_path: projectPath
             })
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok && data.status === 'success') {
             showMessage('success', data.message);
-            
+
             // 延迟跳转到项目列表页面
             setTimeout(() => {
                 window.location.href = '/admin/projects';
@@ -94,14 +150,21 @@ document.getElementById('create-project-form').addEventListener('submit', async 
 function showMessage(type, message) {
     const messageDiv = document.getElementById('form-message');
     messageDiv.className = 'form-message ' + type;
-    messageDiv.textContent = message;
+
+    // 支持多行消息
+    if (message.includes('\\n')) {
+        messageDiv.innerHTML = message.replace(/\\n/g, '<br>');
+    } else {
+        messageDiv.textContent = message;
+    }
+
     messageDiv.style.display = 'block';
-    
+
     // 3秒后自动隐藏成功消息
-    if (type === 'success') {
+    if (type === 'success' || type === 'info') {
         setTimeout(() => {
             messageDiv.style.display = 'none';
-        }, 3000);
+        }, 5000);
     }
 }
 </script>
@@ -126,6 +189,25 @@ function showMessage(type, message) {
     color: #dc3545;
 }
 
+/* 输入组样式 */
+.input-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.input-group input[type="text"] {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    background-color: #f8f9fa;
+}
+
+.input-group input[type="text"]:not([readonly]) {
+    background-color: #fff;
+}
+
 .form-group input[type="text"],
 .form-group input[type="password"],
 .form-group select,
@@ -143,6 +225,34 @@ function showMessage(type, message) {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* 浏览按钮样式 */
+.btn-browse {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #6c757d;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+}
+
+.btn-browse:hover {
+    background-color: #5a6268;
+}
+
+.btn-browse:active {
+    background-color: #545b62;
+}
+
+.btn-browse svg {
+    flex-shrink: 0;
 }
 
 .form-help {
@@ -174,6 +284,12 @@ function showMessage(type, message) {
     background-color: #d4edda;
     color: #155724;
     border: 1px solid #c3e6cb;
+}
+
+.form-message.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
 }
 
 .info-box {

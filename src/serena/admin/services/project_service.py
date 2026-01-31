@@ -122,7 +122,7 @@ class ProjectService:
             A list of language names
 
         """
-        from serena.config.ls_config import Language
+        from solidlsp.ls_config import Language
 
         return [lang.value for lang in Language]
 
@@ -185,8 +185,8 @@ class ProjectService:
             ValueError: If the project is not found or validation fails
 
         """
-        from serena.config.ls_config import Language
         from serena.config.serena_config import RegisteredProject
+        from solidlsp.ls_config import Language
 
         config = self._agent.serena_config
 
