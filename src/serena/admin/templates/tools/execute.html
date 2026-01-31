@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tool_name }} - 工具执行 - Serena Admin{% endblock %}
+
+{% block content %}
+<h2>工具执行: {{ tool_name }}</h2>
+
+<form id="tool-form" class="tool-form">
+    <div id="form-fields"></div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">执行</button>
+        <a href="/admin/tools/execute" class="btn btn-secondary">返回</a>
+    </div>
+</form>
+
+<div id="result-container" style="display: none;">
+    <div class="result-panel">
+        <h3>执行结果</h3>
+        <div id="result-content"></div>
+    </div>
+    <div class="metadata-panel">
+        <h3>执行详情</h3>
+        <div id="metadata-content"></div>
+    </div>
+</div>
+
+<div id="error-message" class="alert alert-error" style="display: none;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('tool-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const params = {};
+    for (let [key, value] of formData.entries()) {
+        params[key] = value;
+    }
+
+    try {
+        const response = await fetch('/admin/tools/execute/{{ tool_name }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(params)
+        });
+
+        const data = await response.json();
+        displayResult(data);
+    } catch (error) {
+        showError('网络错误: ' + error.message);
+    }
+});
+
+function displayResult(data) {
+    const resultContainer = document.getElementById('result-container');
+    const resultContent = document.getElementById('result-content');
+    const metadataContent = document.getElementById('metadata-content');
+
+    if (data.status === 'success') {
+        resultContent.textContent = JSON.stringify(data.result, null, 2);
+        resultContent.className = 'result-success';
+    } else {
+        resultContent.textContent = data.message || '执行失败';
+        resultContent.className = 'result-error';
+    }
+
+    if (data.metadata) {
+        metadataContent.innerHTML = `
+            <p><strong>状态:</strong> ${data.status}</p>
+            <p><strong>耗时:</strong> ${data.metadata.elapsed_ms}ms</p>
+            <p><strong>时间:</strong> ${data.metadata.timestamp}</p>
+        `;
+    }
+
+    resultContainer.style.display = 'flex';
+}
+
+function showError(message) {
+    const errorDiv = document.getElementById('error-message');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+</script>
+
+<style>
+.tool-form {
+    max-width: 800px;
+    margin: 0 auto 2rem;
+}
+
+.form-actions {
+    margin-top: 1.5rem;
+}
+
+.form-actions .btn {
+    margin-right: 0.5rem;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.result-panel {
+    flex: 3;
+    padding: 1rem;
+}
+
+.metadata-panel {
+    flex: 2;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-left: 1px solid #ddd;
+}
+
+#result-container {
+    display: flex;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-top: 2rem;
+}
+
+.result-success {
+    white-space: pre-wrap;
+    font-family: monospace;
+}
+
+.result-error {
+    color: #dc3545;
+}
+
+.alert-error {
+    padding: 1rem;
+    background: #f8d7da;
+    color: #721c24;
+    border-radius: 4px;
+    margin-top: 1rem;
+}
+</style>
+{% endblock %}
