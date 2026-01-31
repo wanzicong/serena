@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}工具执行 - Serena Admin{% endblock %}
+
+{% block content %}
+<h2>工具执行</h2>
+
+<div class="search-box">
+    <input type="text" id="tool-search" placeholder="搜索工具名称或描述...">
+</div>
+
+<div class="tools-categories">
+    {% for category, tools in categorized_tools.items() %}
+    {% if tools %}
+    <div class="category-section">
+        <h3>{{ category }}</h3>
+        <div class="tools-grid">
+            {% for tool in tools %}
+            <div class="tool-card" data-tool-name="{{ tool.name }}">
+                <h4>{{ tool.name }}</h4>
+                <p>{{ tool.description or '暂无描述' }}</p>
+                <a href="/admin/tools/execute/{{ tool.name }}" class="btn btn-sm">执行</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('tool-search').addEventListener('input', function(e) {
+    const query = e.target.value.toLowerCase();
+    document.querySelectorAll('.tool-card').forEach(card => {
+        const name = card.dataset.toolName.toLowerCase();
+        const desc = card.querySelector('p').textContent.toLowerCase();
+        card.style.display = (name.includes(query) || desc.includes(query)) ? 'block' : 'none';
+    });
+});
+</script>
+
+<style>
+.search-box {
+    margin-bottom: 2rem;
+}
+
+.search-box input {
+    width: 100%;
+    max-width: 600px;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.category-section {
+    margin-bottom: 2rem;
+}
+
+.category-section h3 {
+    color: #333;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 0.5rem;
+}
+
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.tool-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: box-shadow 0.2s;
+}
+
+.tool-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.tool-card h4 {
+    margin-top: 0;
+    color: #007bff;
+}
+
+.tool-card p {
+    color: #666;
+    font-size: 0.9rem;
+    min-height: 2.7rem;
+}
+
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+</style>
+{% endblock %}
