@@ -127,8 +127,9 @@ function displayResult(data) {
     const metadataContent = document.getElementById('metadata-content');
 
     if (data.status === 'success') {
-        resultContent.textContent = JSON.stringify(data.result, null, 2);
-        resultContent.className = 'result-success';
+        const content = JSON.stringify(data.result, null, 2);
+        resultContent.innerHTML = `<pre><code class="language-json">${escapeHtml(content)}</code></pre>`;
+        Prism.highlightAll();
     } else {
         resultContent.textContent = data.message || '执行失败';
         resultContent.className = 'result-error';
@@ -143,6 +144,12 @@ function displayResult(data) {
     }
 
     resultContainer.style.display = 'flex';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function showError(message) {
