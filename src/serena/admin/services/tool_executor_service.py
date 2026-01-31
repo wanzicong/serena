@@ -1,5 +1,6 @@
 """Tool executor service for admin dashboard."""
 
+import time
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -48,6 +49,57 @@ class ToolExecutorService:
                     "parameters": self._extract_parameters(tool),
                 }
         raise ValueError(f"Tool '{tool_name}' not found")
+
+    def execute_tool(self, tool_name: str, params: dict[str, Any]) -> dict[str, Any]:
+        """Execute a tool with the given parameters.
+
+        Args:
+            tool_name: Name of the tool to execute
+            params: Parameters to pass to the tool
+
+        Returns:
+            A dictionary containing execution result and metadata
+
+        Raises:
+            ValueError: If tool is not found
+        """
+        start_time = time.time()
+
+        # Find the tool
+        tool = None
+        for t in self._agent._all_tools.values():
+            if t.get_name() == tool_name:
+                tool = t
+                break
+
+        if tool is None:
+            raise ValueError(f"Tool '{tool_name}' not found")
+
+        try:
+            # Execute the tool
+            result = tool.run(**params)
+            elapsed = time.time() - start_time
+
+            return {
+                "status": "success",
+                "content": result,
+                "metadata": {
+                    "tool_name": tool_name,
+                    "elapsed_ms": round(elapsed * 1000, 2),
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                },
+            }
+        except Exception as e:
+            elapsed = time.time() - start_time
+            return {
+                "status": "error",
+                "error": str(e),
+                "metadata": {
+                    "tool_name": tool_name,
+                    "elapsed_ms": round(elapsed * 1000, 2),
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                },
+            }
 
     def _extract_parameters(self, tool: Any) -> dict[str, Any]:
         """Extract parameter schema from tool."""

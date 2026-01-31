@@ -59,3 +59,23 @@ def test_get_tool_schema():
 
     assert "parameters" in schema
     assert schema["name"] == "read_file"
+
+
+def test_execute_tool_success():
+    """测试成功执行工具"""
+    mock_agent = MagicMock()
+    mock_tool = MagicMock()
+    mock_tool.get_name.return_value = "read_file"
+    mock_tool.run.return_value = "file content here"
+
+    mock_agent._all_tools = {"read_file": mock_tool}
+
+    from serena.admin.services.tool_executor_service import get_tool_executor_service
+    service = get_tool_executor_service(mock_agent)
+    result = service.execute_tool("read_file", {"relative_path": "test.py"})
+
+    assert result["status"] == "success"
+    assert "content" in result
+    assert result["content"] == "file content here"
+    assert "metadata" in result
+
