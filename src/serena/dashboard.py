@@ -134,7 +134,10 @@ class SerenaDashboardAPI:
         self._tool_names = tool_names
         self._agent = agent
         self._shutdown_callback = shutdown_callback
-        self._app = Flask(__name__)
+        # 配置模板文件夹路径，包括主模块和 admin 的模板目录
+        from serena.admin import __file__ as admin_init_file
+        admin_templates_dir = str(Path(admin_init_file).parent / "templates")
+        self._app = Flask(__name__, template_folder=admin_templates_dir)
         self._tool_usage_stats = tool_usage_stats
         self._setup_routes()
 

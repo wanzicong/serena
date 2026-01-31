@@ -1,5 +1,6 @@
 """Admin route definitions"""
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flask import Blueprint, Flask, Response, jsonify, render_template, request
@@ -30,14 +31,23 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
     # 注册错误处理器
     register_error_handlers(app)
 
-    # Create a blueprint for admin routes
-    admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+    # 获取 admin 模块的路径来配置静态文件夹
+    from serena.admin import __file__ as admin_init_file
+    admin_static_dir = str(Path(admin_init_file).parent / "static")
+
+    # Create a blueprint for admin routes（配置静态文件夹）
+    admin_bp = Blueprint("admin", __name__, url_prefix="/admin", static_folder=admin_static_dir, static_url_path="/admin/static")
 
     # Get service instances
     config_service = get_config_service(agent)
     project_service = get_project_service(agent)
     tool_service = get_tool_service(agent)
     monitoring_service = get_monitoring_service(agent)
+
+    @admin_bp.route("/")
+    def admin_home() -> str:
+        """Render the admin home page."""
+        return render_template("index.html")
 
     @admin_bp.route("/projects")
     def projects_list() -> str:

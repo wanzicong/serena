@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Serena Admin - 首页{% endblock %}
+
+{% block content %}
+<div class="welcome-section">
+    <h2>欢迎使用 Serena Admin</h2>
+    <p>Serena AI 编程代理管理界面</p>
+
+    <div class="info-cards">
+        <div class="info-card">
+            <h3>项目</h3>
+            <p>管理 Serena 项目，激活或创建新项目</p>
+            <a href="/admin/projects" class="btn">管理项目</a>
+        </div>
+
+        <div class="info-card">
+            <h3>工具</h3>
+            <p>查看和配置可用的工具</p>
+            <a href="/admin/tools" class="btn">查看工具</a>
+        </div>
+
+        <div class="info-card">
+            <h3>配置</h3>
+            <p>查看和管理 Serena 配置</p>
+            <a href="/admin/config" class="btn">查看配置</a>
+        </div>
+
+        <div class="info-card">
+            <h3>监控</h3>
+            <p>查看系统状态和性能指标</p>
+            <a href="/admin/monitoring" class="btn">系统监控</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
