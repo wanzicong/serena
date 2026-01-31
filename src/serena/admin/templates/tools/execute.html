@@ -29,13 +29,82 @@
 
 {% block scripts %}
 <script>
+// 工具 schema (从后端传入)
+const toolSchema = {{ tool_schema | tojson }};
+
+// 动态生成表单字段
+function renderForm() {
+    const formFields = document.getElementById('form-fields');
+    const params = toolSchema.parameters || {};
+
+    for (const [paramName, paramInfo] of Object.entries(params)) {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'form-group';
+
+        const label = document.createElement('label');
+        label.textContent = paramName + (paramInfo.required ? ' *' : '');
+        label.htmlFor = paramName;
+        fieldDiv.appendChild(label);
+
+        let input;
+        const paramType = paramInfo.type ? paramInfo.type.toLowerCase() : '';
+
+        if (paramType.includes('bool')) {
+            input = document.createElement('input');
+            input.type = 'checkbox';
+            input.checked = paramInfo.default === true || paramInfo.default === 'true';
+            // 当 checkbox 值改变时，更新其值
+            input.addEventListener('change', function() {
+                this.value = this.checked ? 'true' : 'false';
+            });
+            // 初始化值
+            input.value = input.checked ? 'true' : 'false';
+        } else {
+            input = document.createElement('input');
+            input.type = 'text';
+            input.value = paramInfo.default || '';
+            if (paramInfo.required) input.required = true;
+        }
+
+        input.name = paramName;
+        input.id = paramName;
+
+        if (paramInfo.description) {
+            const help = document.createElement('small');
+            help.className = 'form-help';
+            help.textContent = paramInfo.description;
+            fieldDiv.appendChild(help);
+        }
+
+        fieldDiv.appendChild(input);
+        formFields.appendChild(fieldDiv);
+    }
+}
+
+// 页面加载时渲染表单
+renderForm();
+
 document.getElementById('tool-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const formData = new FormData(this);
     const params = {};
+
+    // 处理普通字段
     for (let [key, value] of formData.entries()) {
         params[key] = value;
+    }
+
+    // 处理 checkbox (未选中的 checkbox 不会出现在 FormData 中)
+    for (const [paramName, paramInfo] of Object.entries(toolSchema.parameters || {})) {
+        const paramType = paramInfo.type ? paramInfo.type.toLowerCase() : '';
+        if (paramType.includes('bool') && !(paramName in params)) {
+            // checkbox 未选中，设置为 false
+            const checkbox = document.getElementById(paramName);
+            if (checkbox && checkbox.type === 'checkbox') {
+                params[paramName] = 'false';
+            }
+        }
     }
 
     try {
@@ -87,6 +156,30 @@ function showError(message) {
 .tool-form {
     max-width: 800px;
     margin: 0 auto 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.form-help {
+    display: block;
+    margin-top: 0.25rem;
+    color: #6c757d;
+    font-size: 0.875rem;
 }
 
 .form-actions {
