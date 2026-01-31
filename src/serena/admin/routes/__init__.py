@@ -7,7 +7,13 @@ from flask import Blueprint, Flask, Response, jsonify, render_template, request
 from pydantic import ValidationError
 
 from serena.admin.error_handlers import register_error_handlers
-from serena.admin.services import get_config_service, get_monitoring_service, get_project_service, get_tool_executor_service, get_tool_service
+from serena.admin.services import (
+    get_config_service,
+    get_monitoring_service,
+    get_project_service,
+    get_tool_executor_service,
+    get_tool_service,
+)
 from serena.admin.validators import (
     ProjectActionRequest,
     ProjectCreateRequest,
@@ -35,7 +41,7 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
     from serena.admin import __file__ as admin_init_file
     admin_static_dir = str(Path(admin_init_file).parent / "static")
 
-    # Create a blueprint for admin routes（配置静态文件夹）
+    # Create a blueprint for admin routes (配置静态文件夹)
     admin_bp = Blueprint("admin", __name__, url_prefix="/admin", static_folder=admin_static_dir, static_url_path="/admin/static")
 
     # Get service instances
@@ -281,6 +287,7 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
 
         Returns:
             按类别分组的工具字典
+
         """
         categories = {
             "文件操作": [],

@@ -13,7 +13,6 @@ src_path = Path(__file__).parent.parent.parent
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-from flask import Flask
 from serena.agent import SerenaAgent
 from serena.config.serena_config import SerenaConfig
 from serena.dashboard import SerenaDashboardAPI
@@ -62,7 +61,7 @@ def main():
         else:
             display_host = host
 
-        # 查找可用端口（从 24285 开始）
+        # 查找可用端口 (从 24285 开始)
         port = SerenaDashboardAPI._find_first_free_port(24285, host)
 
         log.info("")
@@ -76,7 +75,7 @@ def main():
         log.info("=" * 60)
         log.info("")
 
-        # 直接运行 Flask 应用（非线程模式）
+        # 直接运行 Flask 应用 (非线程模式)
         dashboard.run(host=host, port=port)
 
     except KeyboardInterrupt:
@@ -85,7 +84,7 @@ def main():
         log.info("正在停止 Dashboard...")
         log.info("=" * 60)
     except Exception as e:
-        log.error(f"启动 Dashboard 时出错: {e}", exc_info=True)
+        log.exception(f"启动 Dashboard 时出错: {e}")
         sys.exit(1)
 
 
