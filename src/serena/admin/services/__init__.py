@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from serena.admin.services.config_service import ConfigService
 from serena.admin.services.monitoring_service import MonitoringService
 from serena.admin.services.project_service import ProjectService
+from serena.admin.services.tool_executor_service import ToolExecutorService, get_tool_executor_service
 from serena.admin.services.tool_service import ToolService
 
 if TYPE_CHECKING:
@@ -71,9 +72,11 @@ __all__ = [
     "ConfigService",
     "MonitoringService",
     "ProjectService",
+    "ToolExecutorService",
     "ToolService",
     "get_config_service",
     "get_monitoring_service",
     "get_project_service",
+    "get_tool_executor_service",
     "get_tool_service",
 ]

@@ -14,6 +14,12 @@ def reset_singleton():
     yield
 
 
+def test_service_import():
+    """测试服务可以从 services 模块导入"""
+    from serena.admin.services import get_tool_executor_service
+    assert callable(get_tool_executor_service)
+
+
 def test_get_all_tools_returns_list():
     """测试获取所有工具列表"""
     mock_agent = MagicMock()
