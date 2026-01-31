@@ -242,6 +242,37 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         categorized_tools = _categorize_tools(tools)
         return render_template("tools/execute_list.html", categorized_tools=categorized_tools)
 
+    @admin_bp.route("/tools/execute/<tool_name>")
+    def tool_execute_page(tool_name: str) -> str | tuple[str, int]:
+        """Render the tool execution page.
+
+        Args:
+            tool_name: Name of the tool to execute
+
+        """
+        try:
+            tool_schema = tool_executor_service.get_tool_schema(tool_name)
+            return render_template("tools/execute.html", tool_name=tool_name, tool_schema=tool_schema)
+        except ValueError as e:
+            return render_template("error.html", error=str(e)), 404
+
+    @admin_bp.route("/tools/execute/<tool_name>", methods=["POST"])
+    def execute_tool(tool_name: str) -> tuple[Response, int]:
+        """Execute a tool with the provided parameters.
+
+        Args:
+            tool_name: Name of the tool to execute
+
+        """
+        try:
+            data = request.get_json() or {}
+            result = tool_executor_service.execute_tool(tool_name, data)
+            return jsonify({"status": "success", "result": result})
+        except ValueError as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"执行工具时出错: {e!s}"}), 500
+
     def _categorize_tools(tools: list[dict]) -> dict[str, list[dict]]:
         """将工具按类别分组。
 

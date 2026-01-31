@@ -424,3 +424,23 @@ class TestToolsExecuteList:
                 rule_found = True
                 break
         assert rule_found, "工具列表路由不存在"
+
+
+class TestToolExecutePage:
+    """测试单个工具执行页面路由"""
+
+    def test_tool_execute_page_route(self, client: "FlaskClient", mock_agent: MagicMock) -> None:
+        """测试单个工具执行页面路由"""
+        # 设置 mock 工具
+        mock_tool = MagicMock()
+        mock_tool.get_name.return_value = "read_file"
+        mock_agent._all_tools = {"read_file": mock_tool}
+
+        # 验证路由存在
+        app = client.application
+        rule_found = False
+        for rule in app.url_map.iter_rules():
+            if rule.rule == "/admin/tools/execute/<tool_name>" and "GET" in rule.methods:
+                rule_found = True
+                break
+        assert rule_found, "工具执行页面路由不存在"
