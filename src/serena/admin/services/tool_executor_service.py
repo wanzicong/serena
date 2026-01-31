@@ -16,6 +16,7 @@ class ToolExecutorService:
 
         Args:
             agent: The SerenaAgent instance
+
         """
         self._agent = agent
 
@@ -24,6 +25,7 @@ class ToolExecutorService:
 
         Returns:
             A list of tool dictionaries containing name, description, and category
+
         """
         tools = []
         for tool in self._agent.get_exposed_tool_instances():
@@ -41,6 +43,7 @@ class ToolExecutorService:
 
         Returns:
             A dictionary containing tool metadata and parameter schema
+
         """
         # Find the tool by name
         for tool in self._agent._all_tools.values():
@@ -63,6 +66,7 @@ class ToolExecutorService:
 
         Raises:
             ValueError: If tool is not found
+
         """
         start_time = time.time()
 
@@ -77,8 +81,8 @@ class ToolExecutorService:
             raise ValueError(f"Tool '{tool_name}' not found")
 
         try:
-            # Execute the tool
-            result = tool.run(**params)
+            # Execute the tool (Serena tools use 'apply' method)
+            result = tool.apply(**params)
             elapsed = time.time() - start_time
 
             return {
@@ -110,10 +114,11 @@ class ToolExecutorService:
 
         Returns:
             A dictionary mapping parameter names to their schema
+
         """
         try:
-            # Get the run method's signature
-            sig = inspect.signature(tool.run)
+            # Get the apply method's signature (Serena tools use 'apply' method)
+            sig = inspect.signature(tool.apply)
             parameters = {}
 
             for param_name, param in sig.parameters.items():
@@ -151,6 +156,7 @@ def get_tool_executor_service(agent: "SerenaAgent") -> ToolExecutorService:
 
     Returns:
         The ToolExecutorService instance
+
     """
     global _tool_executor_service
     if _tool_executor_service is None:

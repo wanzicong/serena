@@ -1,7 +1,8 @@
 """测试 ToolExecutorService"""
 
-import pytest
 from unittest.mock import MagicMock, Mock
+
+import pytest
 
 
 @pytest.fixture(autouse=True)
@@ -66,7 +67,7 @@ def test_execute_tool_success():
     mock_agent = MagicMock()
     mock_tool = MagicMock()
     mock_tool.get_name.return_value = "read_file"
-    mock_tool.run.return_value = "file content here"
+    mock_tool.apply.return_value = "file content here"
 
     mock_agent._all_tools = {"read_file": mock_tool}
 
