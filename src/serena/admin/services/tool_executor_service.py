@@ -81,8 +81,11 @@ class ToolExecutorService:
             raise ValueError(f"Tool '{tool_name}' not found")
 
         try:
+            # Convert parameters to correct types (form sends everything as strings)
+            converted_params = self._convert_params(tool, params)
+
             # Execute the tool (Serena tools use 'apply' method)
-            result = tool.apply(**params)
+            result = tool.apply(**converted_params)
             elapsed = time.time() - start_time
 
             return {
@@ -105,6 +108,54 @@ class ToolExecutorService:
                     "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
                 },
             }
+
+    def _convert_params(self, tool: Any, params: dict[str, Any]) -> dict[str, Any]:
+        """Convert parameter values to correct types based on tool schema.
+
+        Args:
+            tool: The tool instance
+            params: Raw parameters from form
+
+        Returns:
+            Converted parameters
+
+        """
+        # Get the tool's parameter schema
+        param_schemas = self._extract_parameters(tool)
+
+        converted = {}
+        for param_name, param_value in params.items():
+            if param_name not in param_schemas:
+                converted[param_name] = param_value
+                continue
+
+            param_type = param_schemas[param_name].get("type", "string")
+
+            # Convert based on type
+            if param_value == "" or param_value is None:
+                # Use default value if available
+                converted[param_name] = param_schemas[param_name].get("default")
+                continue
+
+            # Handle bool type (from checkbox)
+            if "bool" in param_type.lower():
+                converted[param_name] = param_value in ("true", "True", "1", True)
+            # Handle int type
+            elif "int" in param_type.lower():
+                try:
+                    converted[param_name] = int(param_value)
+                except (ValueError, TypeError):
+                    converted[param_name] = param_value
+            # Handle float type
+            elif "float" in param_type.lower():
+                try:
+                    converted[param_name] = float(param_value)
+                except (ValueError, TypeError):
+                    converted[param_name] = param_value
+            else:
+                converted[param_name] = param_value
+
+        return converted
 
     def _extract_parameters(self, tool: Any) -> dict[str, Any]:
         """Extract parameter schema from tool.
