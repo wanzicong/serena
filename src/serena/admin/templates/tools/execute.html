@@ -41,33 +41,46 @@ function renderForm() {
         const fieldDiv = document.createElement('div');
         fieldDiv.className = 'form-group';
 
-        const label = document.createElement('label');
-        label.textContent = paramName + (paramInfo.required ? ' *' : '');
-        label.htmlFor = paramName;
-        fieldDiv.appendChild(label);
-
-        let input;
         const paramType = paramInfo.type ? paramInfo.type.toLowerCase() : '';
 
         if (paramType.includes('bool')) {
-            input = document.createElement('input');
+            // Checkbox 特殊处理
+            const checkboxWrapper = document.createElement('div');
+            checkboxWrapper.className = 'checkbox-wrapper';
+
+            const input = document.createElement('input');
             input.type = 'checkbox';
             input.checked = paramInfo.default === true || paramInfo.default === 'true';
-            // 当 checkbox 值改变时，更新其值
+            input.name = paramName;
+            input.id = paramName;
             input.addEventListener('change', function() {
                 this.value = this.checked ? 'true' : 'false';
             });
-            // 初始化值
             input.value = input.checked ? 'true' : 'false';
+
+            const label = document.createElement('label');
+            label.textContent = paramName + (paramInfo.required ? ' *' : '');
+            label.htmlFor = paramName;
+
+            checkboxWrapper.appendChild(input);
+            checkboxWrapper.appendChild(label);
+            fieldDiv.appendChild(checkboxWrapper);
         } else {
-            input = document.createElement('input');
+            // 普通文本输入
+            const label = document.createElement('label');
+            label.textContent = paramName + (paramInfo.required ? ' *' : '');
+            label.htmlFor = paramName;
+            fieldDiv.appendChild(label);
+
+            const input = document.createElement('input');
             input.type = 'text';
             input.value = paramInfo.default || '';
             if (paramInfo.required) input.required = true;
-        }
+            input.name = paramName;
+            input.id = paramName;
 
-        input.name = paramName;
-        input.id = paramName;
+            fieldDiv.appendChild(input);
+        }
 
         if (paramInfo.description) {
             const help = document.createElement('small');
@@ -75,8 +88,6 @@ function renderForm() {
             help.textContent = paramInfo.description;
             fieldDiv.appendChild(help);
         }
-
-        fieldDiv.appendChild(input);
         formFields.appendChild(fieldDiv);
     }
 }
@@ -89,6 +100,19 @@ document.getElementById('tool-form').addEventListener('submit', async function(e
 
     const formData = new FormData(this);
     const params = {};
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const resultContainer = document.getElementById('result-container');
+    const errorMessage = document.getElementById('error-message');
+
+    // 隐藏之前的结果和错误
+    resultContainer.style.display = 'none';
+    errorMessage.style.display = 'none';
+
+    // 显示加载状态
+    submitBtn.disabled = true;
+    submitBtn.classList.add('loading');
+    const originalText = submitBtn.textContent;
+    submitBtn.innerHTML = '<span class="spinner"></span> 执行中...';
 
     // 处理普通字段
     for (let [key, value] of formData.entries()) {
@@ -118,6 +142,11 @@ document.getElementById('tool-form').addEventListener('submit', async function(e
         displayResult(data);
     } catch (error) {
         showError('网络错误: ' + error.message);
+    } finally {
+        // 恢复按钮状态
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('loading');
+        submitBtn.textContent = originalText;
     }
 });
 
@@ -127,23 +156,50 @@ function displayResult(data) {
     const metadataContent = document.getElementById('metadata-content');
 
     if (data.status === 'success') {
-        const content = JSON.stringify(data.result, null, 2);
-        resultContent.innerHTML = `<pre><code class="language-json">${escapeHtml(content)}</code></pre>`;
-        Prism.highlightAll();
+        const result = data.result;
+
+        // 尝试智能格式化结果
+        if (Array.isArray(result)) {
+            // 如果是数组，使用列表展示
+            const list = document.createElement('ul');
+            list.style.cssText = 'list-style: none; padding: 0; margin: 0;';
+            result.forEach(item => {
+                const li = document.createElement('li');
+                li.style.cssText = 'padding: 0.5rem; border-bottom: 1px solid #e9ecef; font-family: monospace;';
+                li.textContent = typeof item === 'object' ? JSON.stringify(item) : item;
+                list.appendChild(li);
+            });
+            resultContent.innerHTML = '';
+            resultContent.appendChild(list);
+        } else if (typeof result === 'object' && result !== null) {
+            // 对象类型，使用 JSON 格式
+            const content = JSON.stringify(result, null, 2);
+            resultContent.innerHTML = `<pre><code class="language-json">${escapeHtml(content)}</code></pre>`;
+            Prism.highlightAll();
+        } else {
+            // 简单类型，直接显示
+            resultContent.innerHTML = `<pre><code>${escapeHtml(String(result))}</code></pre>`;
+        }
+        resultContent.className = 'result-success';
     } else {
         resultContent.textContent = data.message || '执行失败';
         resultContent.className = 'result-error';
     }
 
     if (data.metadata) {
+        const statusBadge = data.status === 'success'
+            ? '<span class="badge badge-success">成功</span>'
+            : '<span class="badge badge-danger">失败</span>';
+
         metadataContent.innerHTML = `
-            <p><strong>状态:</strong> ${data.status}</p>
+            <p><strong>状态:</strong> ${statusBadge}</p>
             <p><strong>耗时:</strong> ${data.metadata.elapsed_ms}ms</p>
-            <p><strong>时间:</strong> ${data.metadata.timestamp}</p>
+            <p><strong>时间:</strong> ${new Date(data.metadata.timestamp).toLocaleString('zh-CN')}</p>
         `;
     }
 
     resultContainer.style.display = 'flex';
+    resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function escapeHtml(text) {
@@ -161,7 +217,7 @@ function showError(message) {
 
 <style>
 .tool-form {
-    max-width: 800px;
+    max-width: 1000px;
     margin: 0 auto 2rem;
 }
 
@@ -173,92 +229,263 @@ function showError(message) {
     display: block;
     font-weight: 600;
     margin-bottom: 0.5rem;
+    color: #2c3e50;
 }
 
 .form-group input[type="text"] {
     width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.form-group input[type="text"]:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    margin-right: 0.5rem;
+    accent-color: #007bff;
+}
+
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.checkbox-wrapper label {
+    margin-bottom: 0;
+    cursor: pointer;
+    user-select: none;
 }
 
 .form-help {
     display: block;
-    margin-top: 0.25rem;
+    margin-top: 0.5rem;
     color: #6c757d;
     font-size: 0.875rem;
+    line-height: 1.4;
 }
 
 .form-actions {
-    margin-top: 1.5rem;
+    margin-top: 2rem;
+    display: flex;
+    gap: 0.75rem;
 }
 
 .form-actions .btn {
-    margin-right: 0.5rem;
+    margin-right: 0;
 }
 
 .btn-primary {
-    background-color: #007bff;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
     cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.btn-primary:hover {
-    background-color: #0056b3;
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .btn-secondary {
-    background-color: #6c757d;
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
     color: white;
     border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
     cursor: pointer;
     text-decoration: none;
     display: inline-block;
+    font-weight: 500;
+    transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
-    background-color: #545b62;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
 }
 
 .result-panel {
-    flex: 3;
-    padding: 1rem;
+    flex: 4;
+    padding: 1.5rem;
+    overflow-x: auto;
+}
+
+.result-panel h3 {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+    font-size: 1.1rem;
 }
 
 .metadata-panel {
-    flex: 2;
-    padding: 1rem;
+    flex: 1;
+    padding: 1.5rem;
     background: #f8f9fa;
     border-left: 1px solid #ddd;
+    min-width: 200px;
+}
+
+.metadata-panel h3 {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+.metadata-panel p {
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
 }
 
 #result-container {
     display: flex;
     border: 1px solid #ddd;
-    border-radius: 8px;
+    border-radius: 12px;
     margin-top: 2rem;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    animation: slideInUp 0.3s ease;
 }
 
 .result-success {
     white-space: pre-wrap;
-    font-family: monospace;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9rem;
 }
 
 .result-error {
     color: #dc3545;
+    padding: 1rem;
+    background: #f8d7da;
+    border-radius: 8px;
+    border-left: 4px solid #dc3545;
 }
 
 .alert-error {
-    padding: 1rem;
+    padding: 1rem 1.25rem;
     background: #f8d7da;
     color: #721c24;
-    border-radius: 4px;
+    border-radius: 8px;
     margin-top: 1rem;
+    border-left: 4px solid #dc3545;
+    animation: slideInUp 0.3s ease;
+}
+
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .tool-form {
+        max-width: 100%;
+    }
+
+    #result-container {
+        flex-direction: column;
+    }
+
+    .metadata-panel {
+        border-left: none;
+        border-top: 1px solid #ddd;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* 代码高亮优化 */
+pre {
+    margin: 0;
+    border-radius: 8px;
+    background: #f8f9fa !important;
+    padding: 1rem !important;
+}
+
+pre code {
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+/* Badge 样式 */
+.badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.badge-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+    color: white;
+}
+
+/* 结果列表样式 */
+.result-success ul li:hover {
+    background: #f8f9fa;
+}
+
+.result-success ul li:last-child {
+    border-bottom: none;
 }
 </style>
 {% endblock %}
