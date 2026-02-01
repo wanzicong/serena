@@ -13,6 +13,9 @@
     </div>
 </form>
 
+<!-- 项目数据存储（用于需要项目选择的工具） -->
+<div id="projects-data" data-projects-url="/admin/projects/list-json" style="display:none;"></div>
+
 <div id="result-container" style="display: none;">
     <div class="result-panel">
         <h3>执行结果</h3>
@@ -32,62 +35,181 @@
 // 工具 schema (从后端传入)
 const toolSchema = {{ tool_schema | tojson }};
 
+// 当前工具名称
+const currentToolName = '{{ tool_name }}';
+
+// 需要项目选择的工具列表
+const TOOLS_REQUIRING_PROJECT_SELECT = [
+    'activate_project',
+    'switch_modes',
+    'get_config'
+];
+
+// 需要项目选择的参数名列表
+const PARAM_NAMES_REQUIRING_PROJECT_SELECT = [
+    'project',
+    'project_name',
+    'path'
+];
+
+// 项目缓存
+let projectsCache = null;
+
+// 获取项目列表
+async function fetchProjects() {
+    if (projectsCache) return projectsCache;
+
+    const projectsUrl = document.getElementById('projects-data').getAttribute('data-projects-url');
+    try {
+        const response = await fetch(projectsUrl);
+        const data = await response.json();
+        if (data.status === 'success') {
+            projectsCache = data.projects;
+            return projectsCache;
+        }
+        return [];
+    } catch (error) {
+        console.error('获取项目列表失败:', error);
+        return [];
+    }
+}
+
+// 渲染项目选择下拉框
+function renderProjectSelect(paramName, paramInfo) {
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'form-group';
+
+    const label = document.createElement('label');
+    label.textContent = '选择项目' + (paramInfo.required ? ' *' : '');
+    label.htmlFor = paramName;
+    fieldDiv.appendChild(label);
+
+    const select = document.createElement('select');
+    select.name = paramName;
+    select.id = paramName;
+    select.className = 'project-select';
+    if (paramInfo.required) select.required = true;
+
+    // 添加默认选项
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '-- 请选择项目 --';
+    select.appendChild(defaultOption);
+
+    // 添加加载提示
+    const loadingOption = document.createElement('option');
+    loadingOption.value = '';
+    loadingOption.textContent = '加载中...';
+    loadingOption.disabled = true;
+    select.appendChild(loadingOption);
+
+    fieldDiv.appendChild(select);
+
+    // 显示帮助文本
+    if (paramInfo.description) {
+        const help = document.createElement('small');
+        help.className = 'form-help';
+        help.textContent = paramInfo.description;
+        fieldDiv.appendChild(help);
+    }
+
+    // 异步加载项目
+    fetchProjects().then(projects => {
+        // 清空选项
+        select.innerHTML = '';
+
+        // 添加默认选项
+        const emptyOption = document.createElement('option');
+        emptyOption.value = '';
+        emptyOption.textContent = '-- 请选择项目 --';
+        select.appendChild(emptyOption);
+
+        // 添加项目选项
+        projects.forEach(project => {
+            const option = document.createElement('option');
+            // project 可能是字符串（项目名）或对象（包含 name 属性）
+            const projectName = typeof project === 'string' ? project : project.name;
+            option.value = projectName;
+            option.textContent = projectName;
+            select.appendChild(option);
+        });
+
+        // 设置默认值
+        if (paramInfo.default) {
+            select.value = paramInfo.default;
+        }
+    });
+
+    return fieldDiv;
+}
+
 // 动态生成表单字段
 function renderForm() {
     const formFields = document.getElementById('form-fields');
     const params = toolSchema.parameters || {};
 
+    // 检查是否需要项目选择
+    const needsProjectSelect = TOOLS_REQUIRING_PROJECT_SELECT.includes(currentToolName);
+
     for (const [paramName, paramInfo] of Object.entries(params)) {
-        const fieldDiv = document.createElement('div');
-        fieldDiv.className = 'form-group';
+        let fieldDiv;
 
-        const paramType = paramInfo.type ? paramInfo.type.toLowerCase() : '';
-
-        if (paramType.includes('bool')) {
-            // Checkbox 特殊处理
-            const checkboxWrapper = document.createElement('div');
-            checkboxWrapper.className = 'checkbox-wrapper';
-
-            const input = document.createElement('input');
-            input.type = 'checkbox';
-            input.checked = paramInfo.default === true || paramInfo.default === 'true';
-            input.name = paramName;
-            input.id = paramName;
-            input.addEventListener('change', function() {
-                this.value = this.checked ? 'true' : 'false';
-            });
-            input.value = input.checked ? 'true' : 'false';
-
-            const label = document.createElement('label');
-            label.textContent = paramName + (paramInfo.required ? ' *' : '');
-            label.htmlFor = paramName;
-
-            checkboxWrapper.appendChild(input);
-            checkboxWrapper.appendChild(label);
-            fieldDiv.appendChild(checkboxWrapper);
+        // 如果是需要项目选择的参数名，使用下拉选择
+        if (needsProjectSelect && PARAM_NAMES_REQUIRING_PROJECT_SELECT.includes(paramName)) {
+            fieldDiv = renderProjectSelect(paramName, paramInfo);
         } else {
-            // 普通文本输入
-            const label = document.createElement('label');
-            label.textContent = paramName + (paramInfo.required ? ' *' : '');
-            label.htmlFor = paramName;
-            fieldDiv.appendChild(label);
+            fieldDiv = document.createElement('div');
+            fieldDiv.className = 'form-group';
 
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = paramInfo.default || '';
-            if (paramInfo.required) input.required = true;
-            input.name = paramName;
-            input.id = paramName;
+            const paramType = paramInfo.type ? paramInfo.type.toLowerCase() : '';
 
-            fieldDiv.appendChild(input);
+            if (paramType.includes('bool')) {
+                // Checkbox 特殊处理
+                const checkboxWrapper = document.createElement('div');
+                checkboxWrapper.className = 'checkbox-wrapper';
+
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.checked = paramInfo.default === true || paramInfo.default === 'true';
+                input.name = paramName;
+                input.id = paramName;
+                input.addEventListener('change', function() {
+                    this.value = this.checked ? 'true' : 'false';
+                });
+                input.value = input.checked ? 'true' : 'false';
+
+                const label = document.createElement('label');
+                label.textContent = paramName + (paramInfo.required ? ' *' : '');
+                label.htmlFor = paramName;
+
+                checkboxWrapper.appendChild(input);
+                checkboxWrapper.appendChild(label);
+                fieldDiv.appendChild(checkboxWrapper);
+            } else {
+                // 普通文本输入
+                const label = document.createElement('label');
+                label.textContent = paramName + (paramInfo.required ? ' *' : '');
+                label.htmlFor = paramName;
+                fieldDiv.appendChild(label);
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = paramInfo.default || '';
+                if (paramInfo.required) input.required = true;
+                input.name = paramName;
+                input.id = paramName;
+
+                fieldDiv.appendChild(input);
+            }
+
+            if (paramInfo.description) {
+                const help = document.createElement('small');
+                help.className = 'form-help';
+                help.textContent = paramInfo.description;
+                fieldDiv.appendChild(help);
+            }
         }
 
-        if (paramInfo.description) {
-            const help = document.createElement('small');
-            help.className = 'form-help';
-            help.textContent = paramInfo.description;
-            fieldDiv.appendChild(help);
-        }
         formFields.appendChild(fieldDiv);
     }
 }
@@ -245,6 +367,35 @@ function showError(message) {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-group select.project-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    background: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 12px;
+    padding-right: 2.5rem;
+}
+
+.form-group select.project-select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-group select.project-select:disabled {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 .form-group input[type="checkbox"] {

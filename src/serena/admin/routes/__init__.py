@@ -62,6 +62,21 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         projects = project_service.get_all_projects()
         return render_template("projects/list.html", projects=projects)
 
+    @admin_bp.route("/projects/list-json", methods=["GET"])
+    def projects_list_json() -> Response:
+        """Return the list of all projects as JSON."""
+        try:
+            projects = project_service.get_all_projects()
+            return jsonify({
+                "status": "success",
+                "projects": projects
+            })
+        except Exception as e:
+            return jsonify({
+                "status": "error",
+                "message": f"获取项目列表失败: {e!s}"
+            }), 500
+
     @admin_bp.route("/projects/activate", methods=["POST"])
     def activate_project() -> tuple[Response, int] | Response:
         """Activate a project by name."""

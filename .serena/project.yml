@@ -29,7 +29,6 @@ languages:
 - python
 - typescript
 
-
 # whether to use project's .gitignore files to ignore files
 ignore_all_files_in_gitignore: true
 
@@ -93,7 +92,8 @@ included_optional_tools: []
 # (contrary to the memories, which are loaded on demand).
 initial_prompt: ""
 
-
+# the encoding used by text files in the project
+# For a list of possible encodings, see https://docs.python.org/3.11/library/codecs.html#standard-encodings
 encoding: utf-8
 
 
