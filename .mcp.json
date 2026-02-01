@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server"
+      ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ],
+      "env": {
+        "CHROME_EXECUTABLE": "C:\\Users\\13608\\scoop\\apps\\googlechrome\\144.0.7559.60\\chrome.exe"
+      }
+    }
+  }
+}
