@@ -100,6 +100,97 @@ def register_admin_routes(app: Flask, agent: "SerenaAgent") -> None:
         languages = project_service.get_available_languages()
         return render_template("projects/new.html", languages=languages)
 
+    @admin_bp.route("/projects/browse-filesystem", methods=["POST"])
+    def browse_filesystem() -> tuple[Response, int] | Response:
+        """Browse the filesystem and return directory contents."""
+        import os
+        import platform
+
+        try:
+            data = request.get_json() or {}
+            path = data.get("path", "")
+
+            # 如果没有提供路径，返回根目录或驱动器列表
+            if not path:
+                system = platform.system()
+                if system == "Windows":
+                    # Windows: 返回所有驱动器
+                    import string
+                    drives = []
+                    for letter in string.ascii_uppercase:
+                        drive = f"{letter}:\\"
+                        if os.path.exists(drive):
+                            drives.append({
+                                "name": drive,
+                                "path": drive,
+                                "type": "drive",
+                                "is_dir": True
+                            })
+                    return jsonify({
+                        "status": "success",
+                        "path": "",
+                        "items": drives,
+                        "parent": None
+                    })
+                else:
+                    # Unix-like: 从根目录开始
+                    path = "/"
+
+            # 验证路径存在
+            if not os.path.exists(path):
+                return jsonify({
+                    "status": "error",
+                    "message": f"路径不存在: {path}"
+                }), 404
+
+            # 验证是目录
+            if not os.path.isdir(path):
+                return jsonify({
+                    "status": "error",
+                    "message": f"不是有效的目录: {path}"
+                }), 400
+
+            # 获取目录内容
+            items = []
+            try:
+                for entry in os.scandir(path):
+                    try:
+                        # 只显示目录
+                        if entry.is_dir():
+                            items.append({
+                                "name": entry.name,
+                                "path": entry.path,
+                                "type": "directory",
+                                "is_dir": True
+                            })
+                    except (PermissionError, OSError):
+                        # 跳过无权限访问的目录
+                        continue
+            except PermissionError:
+                return jsonify({
+                    "status": "error",
+                    "message": f"没有权限访问: {path}"
+                }), 403
+
+            # 按名称排序
+            items.sort(key=lambda x: x["name"].lower())
+
+            # 获取父目录
+            parent = str(Path(path).parent) if path != Path(path).anchor else None
+
+            return jsonify({
+                "status": "success",
+                "path": path,
+                "items": items,
+                "parent": parent
+            })
+
+        except Exception as e:
+            return jsonify({
+                "status": "error",
+                "message": f"浏览文件系统时出错: {e!s}"
+            }), 500
+
     @admin_bp.route("/projects/create", methods=["POST"])
     def create_project() -> tuple[Response, int] | Response:
         """Create a new project from a given path."""

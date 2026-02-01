@@ -14,20 +14,18 @@
                 id="project-path"
                 name="project_path"
                 required
-                placeholder="输入项目根目录的绝对路径，例如: C:\Users\YourName\Projects\MyProject"
+                placeholder="点击"浏览"按钮选择项目文件夹"
                 readonly
             >
             <button type="button" class="btn btn-browse" id="browse-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9zM2.5 3a.5.5 0 0 0-.5.5V6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5zM14 7H2v5.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V7z"/>
                 </svg>
-                浏览文件夹
+                浏览
             </button>
-            <input type="file" id="folder-selector" webkitdirectory directory style="display: none;">
         </div>
         <small class="form-help">
-            请提供项目根目录的绝对路径。Serena 将自动检测项目配置和编程语言。
+            请选择项目根目录。Serena 将自动检测项目配置和编程语言。
         </small>
     </div>
 
@@ -38,6 +36,37 @@
 </form>
 
 <div id="form-message" class="form-message" style="display: none;"></div>
+
+<!-- 文件夹浏览器模态框 -->
+<div id="folder-browser-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>选择项目文件夹</h3>
+            <button type="button" class="modal-close" id="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="browser-toolbar">
+                <button type="button" class="btn btn-sm btn-secondary" id="parent-btn" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M12 8a.5.5 0 0 1-.5.5H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5a.5.5 0 0 1 .5.5z"/>
+                    </svg>
+                    上一级
+                </button>
+                <div class="current-path" id="current-path">加载中...</div>
+            </div>
+            <div class="browser-list" id="folder-list">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>加载中...</p>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="select-folder-btn" disabled>选择此文件夹</button>
+            <button type="button" class="btn btn-secondary" id="cancel-btn">取消</button>
+        </div>
+    </div>
+</div>
 
 <div class="info-box">
     <h3>说明</h3>
@@ -52,85 +81,136 @@
 
 {% block scripts %}
 <script>
-// 文件夹选择器功能
-const browseBtn = document.getElementById('browse-btn');
-const folderSelector = document.getElementById('folder-selector');
-const projectPathInput = document.getElementById('project-path');
+let currentPath = '';
+let parentPath = null;
 
-browseBtn.addEventListener('click', function() {
-    folderSelector.click();
+// 打开文件夹浏览器
+document.getElementById('browse-btn').addEventListener('click', function() {
+    const modal = document.getElementById('folder-browser-modal');
+    modal.style.display = 'flex';
+    loadDirectory('');
 });
 
-folderSelector.addEventListener('change', function(e) {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-        // 获取第一个文件的路径，它包含文件夹路径
-        const firstFile = files[0];
-        const fullPath = firstFile.webkitRelativePath || firstFile.name;
+// 关闭模态框
+document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+document.getElementById('cancel-btn').addEventListener('click', closeModal);
 
-        // 从路径中提取文件夹路径（去除文件名）
-        const pathParts = fullPath.split('/');
-        if (pathParts.length > 1) {
-            // 获取文件夹部分
-            const folderPath = pathParts.slice(0, -1).join('/');
+function closeModal() {
+    document.getElementById('folder-browser-modal').style.display = 'none';
+}
 
-            // 在 Windows 上，需要转换路径格式
-            // 如果用户选择了 C:/Users/xxx/project，我们尽量获取完整路径
-            // 注意：出于安全原因，浏览器不会返回完整的本地路径
-            // 我们只能获取相对路径或文件夹名
+// 加载目录内容
+async function loadDirectory(path) {
+    const folderList = document.getElementById('folder-list');
+    const currentPathDiv = document.getElementById('current-path');
+    const parentBtn = document.getElementById('parent-btn');
+    const selectBtn = document.getElementById('select-folder-btn');
 
-            // 尝试获取更准确的路径
-            let displayPath = folderPath;
+    // 显示加载状态
+    folderList.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>加载中...</p></div>';
+    currentPathDiv.textContent = '加载中...';
+    parentBtn.disabled = true;
+    selectBtn.disabled = true;
 
-            // 如果只有文件夹名，提示用户输入完整路径
-            if (!displayPath.includes(':') && !displayPath.startsWith('/')) {
-                // 只有文件夹名的情况
-                showMessage('info', `已选择文件夹: ${displayPath}\\n\\n由于浏览器安全限制，请手动输入完整路径，例如: C:\\\\Users\\\\YourName\\\\${displayPath}`);
-                projectPathInput.value = '';
-                projectPathInput.readOnly = false;
-                projectPathInput.placeholder = `请输入完整路径，例如: C:\\Users\\YourName\\${displayPath}`;
-            } else {
-                projectPathInput.value = displayPath;
-                projectPathInput.readOnly = true;
-            }
+    try {
+        const response = await fetch('/admin/projects/browse-filesystem', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ path: path })
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            currentPath = data.path;
+            parentPath = data.parent;
+
+            // 更新当前路径显示
+            currentPathDiv.textContent = currentPath || '选择驱动器';
+
+            // 更新上一级按钮状态
+            parentBtn.disabled = !parentPath;
+
+            // 更新选择按钮状态（驱动器列表时禁用）
+            selectBtn.disabled = !currentPath;
+
+            // 渲染文件夹列表
+            renderFolderList(data.items);
+        } else {
+            showError(data.message || '加载失败');
         }
+    } catch (error) {
+        showError('网络错误: ' + error.message);
+    }
+}
+
+// 渲染文件夹列表
+function renderFolderList(items) {
+    const folderList = document.getElementById('folder-list');
+
+    if (items.length === 0) {
+        folderList.innerHTML = '<div class="empty-state"><p>此文件夹为空</p></div>';
+        return;
+    }
+
+    folderList.innerHTML = '';
+    items.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'folder-item';
+        itemDiv.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9zM2.5 3a.5.5 0 0 0-.5.5V6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5zM14 7H2v5.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V7z"/>
+            </svg>
+            <span class="folder-name">${escapeHtml(item.name)}</span>
+        `;
+        itemDiv.addEventListener('click', () => {
+            loadDirectory(item.path);
+        });
+        folderList.appendChild(itemDiv);
+    });
+}
+
+// 上一级按钮
+document.getElementById('parent-btn').addEventListener('click', function() {
+    if (parentPath) {
+        loadDirectory(parentPath);
     }
 });
 
+// 选择文件夹按钮
+document.getElementById('select-folder-btn').addEventListener('click', function() {
+    if (currentPath) {
+        document.getElementById('project-path').value = currentPath;
+        closeModal();
+    }
+});
+
+// 创建项目表单提交
 document.getElementById('create-project-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const projectPath = document.getElementById('project-path').value.trim();
-    const messageDiv = document.getElementById('form-message');
     const submitBtn = this.querySelector('button[type="submit"]');
 
-    // 基本验证
     if (!projectPath) {
-        showMessage('error', '请输入项目路径');
+        showMessage('error', '请选择项目路径');
         return;
     }
 
-    // 禁用提交按钮
     submitBtn.disabled = true;
-    submitBtn.textContent = '创建中...';
+    submitBtn.innerHTML = '<span class="spinner"></span> 创建中...';
 
     try {
         const response = await fetch('/admin/projects/create', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                project_path: projectPath
-            })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ project_path: projectPath })
         });
 
         const data = await response.json();
 
         if (response.ok && data.status === 'success') {
             showMessage('success', data.message);
-
-            // 延迟跳转到项目列表页面
             setTimeout(() => {
                 window.location.href = '/admin/projects';
             }, 1500);
@@ -140,7 +220,6 @@ document.getElementById('create-project-form').addEventListener('submit', async 
             submitBtn.textContent = '创建项目';
         }
     } catch (error) {
-        console.error('Error:', error);
         showMessage('error', '网络错误，请稍后重试');
         submitBtn.disabled = false;
         submitBtn.textContent = '创建项目';
@@ -150,22 +229,25 @@ document.getElementById('create-project-form').addEventListener('submit', async 
 function showMessage(type, message) {
     const messageDiv = document.getElementById('form-message');
     messageDiv.className = 'form-message ' + type;
-
-    // 支持多行消息
-    if (message.includes('\\n')) {
-        messageDiv.innerHTML = message.replace(/\\n/g, '<br>');
-    } else {
-        messageDiv.textContent = message;
-    }
-
+    messageDiv.textContent = message;
     messageDiv.style.display = 'block';
 
-    // 3秒后自动隐藏成功消息
     if (type === 'success' || type === 'info') {
         setTimeout(() => {
             messageDiv.style.display = 'none';
         }, 5000);
     }
+}
+
+function showError(message) {
+    const folderList = document.getElementById('folder-list');
+    folderList.innerHTML = `<div class="error-state"><p>${escapeHtml(message)}</p></div>`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 </script>
 
@@ -183,13 +265,13 @@ function showMessage(type, message) {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 600;
+    color: #2c3e50;
 }
 
 .form-group label .required {
     color: #dc3545;
 }
 
-/* 输入组样式 */
 .input-group {
     display: flex;
     gap: 0.5rem;
@@ -197,58 +279,39 @@ function showMessage(type, message) {
 
 .input-group input[type="text"] {
     flex: 1;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
     font-size: 1rem;
     background-color: #f8f9fa;
+    transition: all 0.2s ease;
 }
 
-.input-group input[type="text"]:not([readonly]) {
-    background-color: #fff;
-}
-
-.form-group input[type="text"],
-.form-group input[type="password"],
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+.input-group input[type="text"]:focus {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
-/* 浏览按钮样式 */
 .btn-browse {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background-color: #6c757d;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
     color: #fff;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
+    font-weight: 500;
     white-space: nowrap;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
 }
 
 .btn-browse:hover {
-    background-color: #5a6268;
-}
-
-.btn-browse:active {
-    background-color: #545b62;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
 }
 
 .btn-browse svg {
@@ -257,9 +320,10 @@ function showMessage(type, message) {
 
 .form-help {
     display: block;
-    margin-top: 0.25rem;
+    margin-top: 0.5rem;
     font-size: 0.875rem;
     color: #6c757d;
+    line-height: 1.4;
 }
 
 .form-actions {
@@ -269,42 +333,202 @@ function showMessage(type, message) {
 }
 
 .form-message {
-    padding: 1rem;
-    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
     margin-top: 1rem;
+    animation: slideInUp 0.3s ease;
 }
 
 .form-message.error {
     background-color: #f8d7da;
     color: #721c24;
-    border: 1px solid #f5c6cb;
+    border-left: 4px solid #dc3545;
 }
 
 .form-message.success {
     background-color: #d4edda;
     color: #155724;
-    border: 1px solid #c3e6cb;
+    border-left: 4px solid #28a745;
 }
 
 .form-message.info {
     background-color: #d1ecf1;
     color: #0c5460;
-    border: 1px solid #bee5eb;
+    border-left: 4px solid #17a2b8;
+}
+
+/* 模态框样式 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    animation: slideInUp 0.3s ease;
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #2c3e50;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: #f8f9fa;
+    color: #2c3e50;
+}
+
+.modal-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.browser-toolbar {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.btn-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.current-path {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    color: #495057;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.browser-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.folder-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin: 0.25rem 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.folder-item:hover {
+    background: linear-gradient(90deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    transform: translateX(4px);
+}
+
+.folder-item svg {
+    color: #667eea;
+    flex-shrink: 0;
+}
+
+.folder-name {
+    font-size: 0.95rem;
+    color: #2c3e50;
+}
+
+.loading-spinner, .empty-state, .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(102, 126, 234, 0.2);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 1rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
 }
 
 .info-box {
     max-width: 600px;
     margin: 2rem auto 0;
-    padding: 1rem;
-    background-color: #e7f3ff;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #e7f3ff 0%, #f0f7ff 100%);
     border-left: 4px solid #007bff;
-    border-radius: 4px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
 }
 
 .info-box h3 {
     margin-top: 0;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
     font-size: 1.1rem;
+    color: #2c3e50;
 }
 
 .info-box ul {
@@ -313,7 +537,46 @@ function showMessage(type, message) {
 }
 
 .info-box li {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .browser-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .current-path {
+        order: -1;
+    }
 }
 </style>
 {% endblock %}
